@@ -75,7 +75,20 @@ pass: 18ebyhwb
 ```
 
 ## Some screenshots
-<img src="https://drive.google.com/file/d/1FZlUpL-PTrddJPJyeN0prk1kKsJjP0G3/view?usp=sharing" alt="Main page">
-<img src="https://drive.google.com/file/d/1auFzyGRqC27XcDMwN-w3T-qMCgVxEC60/view?usp=sharing" alt="Search">
-<img src="https://drive.google.com/file/d/1JJrxJvE6GSWPIWhOA-wgkWcGWGryrdta/view?usp=sharing" alt="Profile">
-<img src="https://drive.google.com/file/d/1yKzQYkUdBcK51N4y_tU2N5c4F1gXeGYD/view?usp=sharing" alt="Chat">
+
+- Main page
+
+https://drive.google.com/file/d/1FZlUpL-PTrddJPJyeN0prk1kKsJjP0G3/view?usp=sharing
+
+- Search
+
+https://drive.google.com/file/d/1auFzyGRqC27XcDMwN-w3T-qMCgVxEC60/view?usp=sharing
+
+- Profile
+
+https://drive.google.com/file/d/1JJrxJvE6GSWPIWhOA-wgkWcGWGryrdta/view?usp=sharing
+
+
+- Chat 
+
+https://drive.google.com/file/d/1yKzQYkUdBcK51N4y_tU2N5c4F1gXeGYD/view?usp=sharing
