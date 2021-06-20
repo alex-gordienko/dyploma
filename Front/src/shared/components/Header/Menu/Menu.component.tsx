@@ -2,14 +2,15 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import StyledMenu from "./Menu.styled";
+import { ButtonBlock } from "../../EditorComponents/EditorComponents.styled";
 
 const Menu = () => (
   <StyledMenu>
-    <div className="menu-createMarker-button">
-      <NavLink to="/create-marker" className="button-menu-link">
-        Create Marker
+    <ButtonBlock>
+      <NavLink to="/postEditor/new" className="label-button">
+        Create Post
       </NavLink>
-    </div>
+    </ButtonBlock>
     <NavLink
       exact={true}
       to="/"
@@ -26,7 +27,7 @@ const Menu = () => (
       Friend's list
     </NavLink>
     <NavLink
-      to="/chat"
+      to="/chatlist"
       className="menu-link"
       activeClassName="menu-link--active"
     >

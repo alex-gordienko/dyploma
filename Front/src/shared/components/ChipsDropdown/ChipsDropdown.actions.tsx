@@ -26,7 +26,11 @@ const setVisible = (visible: boolean): ISetVisibleAction => ({
   visible
 });
 
-const reset = (inputData: string[]): IResetAction => ({
+const reset = (
+  inputData: JSX.Element[],
+  alreadySelectedChips: string[]
+): IResetAction => ({
+  alreadySelectedChips,
   inputData,
   type: "RESET"
 });

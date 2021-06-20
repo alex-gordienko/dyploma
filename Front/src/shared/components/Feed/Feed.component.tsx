@@ -1,69 +1,111 @@
 /* tslint:disable */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import StyledFeed from "./Feed.styled";
 import Post from "./Post";
+import Preloader from "../Preloader";
 import { FeedList } from "./Feed.constants";
-import { IPost } from "../../../App.types";
+import { IPost, IComment } from "../../../App.types";
+import { ButtonBlock } from "../EditorComponents/EditorComponents.styled";
 
-interface IFeedProps {
-  data?: IPost[];
-  selectedMarker?: number;
+interface ILowFeedProps {
+  type: "Preview";
+  data: IPost[];
+  currentUser: number;
+  onReadyToCallNextPage: boolean;
   onSelect: (value: number) => void;
+  onCallNextPage: (postsCount: number[]) => void;
+  onLike: (post: number, type: "new" | "inversion" | "from dislike") => void;
+  onDislike: (post: number, type: "new" | "inversion" | "from like") => void;
 }
 
-const Feed = ({ data, onSelect, selectedMarker }: IFeedProps) => {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+interface IFullFeedProps {
+  type: "FullPost";
+  data?: IPost;
+  comments: IComment[];
+  currentUser: number;
+  onSelect: (value: number) => void;
+  onCreateComment: (idPost: number, comment: string) => void;
+  onLike: (post: number, type: "new" | "inversion" | "from dislike") => void;
+  onDislike: (post: number, type: "new" | "inversion" | "from like") => void;
+}
+
+type IFeedProps = ILowFeedProps | IFullFeedProps;
+const Feed = (mode: IFeedProps) => {
+  const lastPostElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const keyClick = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex(
-          selectedIndex === 0 ? FeedList.length - 1 : selectedIndex - 1
-        );
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex(
-          selectedIndex === FeedList.length - 1 ? 0 : selectedIndex + 1
-        );
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        onSelect(selectedIndex);
-      }
-    };
-    window.addEventListener("keydown", keyClick);
-    return () => {
-      window.removeEventListener("keydown", keyClick);
-    };
-  });
+    if (lastPostElement.current) {
+      var observer = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          console.log("Auto call next page");
+          if (mode.type === "Preview" && mode.data.length > 1) {
+            mode.onCallNextPage(Array.from(mode.data, post => post.idPost));
+          }
+        }
+      });
+      observer.observe(lastPostElement.current);
+      return () => {
+        observer.disconnect();
+      };
+    }
+  }, [mode.data]);
 
-  return selectedMarker === 0 ? (
+  const loadMore = () => {
+    if (mode.type === "Preview") {
+      mode.onCallNextPage(Array.from(mode.data, post => post.idPost));
+    }
+  };
+
+  return mode.type === "Preview" ? (
     <StyledFeed>
-      {data!.map(item => {
-        return (
-          <Post
-            key={item.idPost}
-            item={item}
-            active={selectedIndex === parseInt(item.idPost)}
-            onClick={onSelect}
-          />
-        );
-      })}
+      {mode.data ? (
+        mode.data.map((item, indx) => {
+          return (
+            <Post
+              key={indx}
+              type="Preview"
+              item={item}
+              isEdit={mode.currentUser === item.idUser ? true : false}
+              onClick={mode.onSelect}
+              onLike={mode.onLike}
+              onDislike={mode.onDislike}
+            />
+          );
+        })
+      ) : (
+        <Preloader message="Loading posts..." />
+      )}
+      {mode.onReadyToCallNextPage ? (
+        <ButtonBlock>
+          <div
+            ref={lastPostElement}
+            onClick={loadMore}
+            className="label-button"
+          >
+            Load More
+          </div>
+        </ButtonBlock>
+      ) : (
+        <Preloader message="Loading posts..." />
+      )}
     </StyledFeed>
   ) : (
     <StyledFeed>
-      {data!
-        .filter(selected => parseInt(selected.idPost) === selectedMarker)
-        .map(item => {
-          return (
-            <Post
-              key={item.idPost}
-              item={item}
-              active={selectedIndex === parseInt(item.idPost)}
-              onClick={onSelect}
-            />
-          );
-        })}
+      {mode.data ? (
+        <Post
+          type="FullPost"
+          item={mode.data}
+          isEdit={mode.currentUser === mode.data.idUser ? true : false}
+          comments={mode.comments}
+          onCreateComment={(comment: string) => {
+            mode.onCreateComment(mode.data!.idPost, comment);
+          }}
+          onLike={mode.onLike}
+          onDislike={mode.onDislike}
+        />
+      ) : (
+        <Preloader message="Loading posts..." />
+      )}
     </StyledFeed>
   );
 };

@@ -8,8 +8,8 @@ import {
 
 interface IChipsDropdownState {
   chipsList: string[];
-  filteredData: string[];
-  inputData: string[];
+  filteredData: JSX.Element[];
+  inputData: JSX.Element[];
   text: string;
   visible: boolean;
 }
@@ -28,9 +28,10 @@ const initialState = {
   visible: false
 };
 
-const arrayDiff = (originalArray: string[], secondArray: string[]) => {
+const arrayDiff = (originalArray: JSX.Element[], secondArray: string[]) => {
   return originalArray.filter(
-    (element: string) => !secondArray.includes(element)
+    (element: JSX.Element) =>
+      !secondArray.includes(element.key !== null ? element.key.toString() : "0")
   );
 };
 
@@ -38,7 +39,7 @@ const reducer = (state: IChipsDropdownState, action: IChipsDropDownActions) => {
   switch (action.type) {
     case "ADD_CHIPS": {
       const isFound = state.inputData.find(
-        (item: string) => item === action.element
+        (item: JSX.Element) => item.key === action.element
       );
 
       const chipsListWithNewElement = [...state.chipsList, action.element];
@@ -69,8 +70,10 @@ const reducer = (state: IChipsDropdownState, action: IChipsDropDownActions) => {
         ...state,
         filteredData:
           action.text.length > 0
-            ? state.filteredData.filter((item: string) =>
-                item.toLowerCase().includes(action.text.toLowerCase())
+            ? state.filteredData.filter((item: JSX.Element) =>
+                item.key && typeof item.key === "string"
+                  ? item.key.toLowerCase().includes(action.text.toLowerCase())
+                  : null
               )
             : arrayDiff(state.inputData, state.chipsList),
         text: action.text,
@@ -85,11 +88,10 @@ const reducer = (state: IChipsDropdownState, action: IChipsDropDownActions) => {
     }
     case "RESET": {
       return {
-        chipsList: [],
+        ...state,
         filteredData: action.inputData,
         inputData: action.inputData,
-        text: "",
-        visible: false
+        chipsList: action.alreadySelectedChips
       };
     }
     default: {

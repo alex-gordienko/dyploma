@@ -1,69 +1,96 @@
-/* tslint:disable */
 import {
+  IIsLoadingAction,
+  ISetProgressAction,
+  ISetErrorMessageAction,
   ILogInAction,
-  IGetStateAction,
+  ISaveUserDataAction,
   ILogOutAction,
-  IUpdateStateAction,
   IGetPostsAction,
-  ILoadPhotoesAction,
-  IPhotoBuffer,
   INewPost,
-  ICreatePostAction
+  ICreatePostAction,
+  IEditPostAction,
+  ISetEditedPostAction,
+  IProfileAction,
+  IFullDataUser,
+  IPost,
+  ICountriesAndCities,
+  IGetCountriesAndCitiesAction,
+  ISearchedUser
 } from "./App.types";
 
-const logIn = (
-  bufLogin: string,
-  bufEmail: string,
-  bufPass: string
-): ILogInAction => ({
-  bufEmail,
-  bufLogin,
-  bufPass,
-  type: "login"
+const isLoading = (status: boolean): IIsLoadingAction => ({
+  status,
+  type: "isLoading"
 });
 
-const getState = (): IGetStateAction => ({
-  type: "getState"
+const setProgress = (message: string): ISetProgressAction => ({
+  message,
+  type: "setProgress"
+});
+
+const setErrorMessage = (message: string): ISetErrorMessageAction => ({
+  message,
+  type: "setError"
+});
+
+const logIn = (userData: IFullDataUser): ILogInAction => ({
+  type: "login",
+  userData
 });
 
 const logOut = (): ILogOutAction => ({
   type: "logout"
 });
 
-const update = (): IUpdateStateAction => ({
-  type: "updateState"
+const getCountriesAndCities = (
+  countries: ICountriesAndCities
+): IGetCountriesAndCitiesAction => ({
+  countries,
+  type: "getCountriesAndCities"
 });
 
-const getPosts = (): IGetPostsAction => ({
-  type: "getPosts"
+const createPost = (newPost: IPost): ICreatePostAction => ({
+  newPost,
+  type: "CreatePost"
 });
 
-const loadPhotoes = (name: string, blob: string): ILoadPhotoesAction => {
-  var d = new Date();
-  var dateTime: string =
-    d.getFullYear() +
-    "-" +
-    (d.getMonth() + 1) +
-    "-" +
-    d.getDate() +
-    " " +
-    d.getHours() +
-    ":" +
-    d.getMinutes() +
-    ":" +
-    d.getSeconds();
-  return {
-    type: "loadPhotoes",
-    buffer: {
-      name: name + "-" + dateTime,
-      blob
-    }
-  };
+const editPost = (editedPost: IPost): IEditPostAction => ({
+  editedPost,
+  type: "EditExistPost"
+});
+
+const setEditedPost = (
+  searchedPost: IPost | "new" | "No Results Found."
+): ISetEditedPostAction => ({
+  searchedPost,
+  type: "CheckPost"
+});
+
+const editProfile = (userData: IFullDataUser): IProfileAction => ({
+  type: "EditUser",
+  userData
+});
+
+const createProfile = (userData: IFullDataUser): IProfileAction => ({
+  type: "CreateUser",
+  userData
+});
+
+const saveUserDataToCookie = (): ISaveUserDataAction => ({
+  type: "SaveUserData"
+});
+
+export {
+  isLoading,
+  setProgress,
+  setErrorMessage,
+  logIn,
+  saveUserDataToCookie,
+  logOut,
+  getCountriesAndCities,
+  createPost,
+  editPost,
+  setEditedPost,
+  editProfile,
+  createProfile
 };
-
-const createPost = (newPost: INewPost): ICreatePostAction => ({
-  type: "CreatePost",
-  newPost
-});
-
-export { logIn, getState, logOut, update, getPosts, loadPhotoes, createPost };

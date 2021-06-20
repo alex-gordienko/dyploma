@@ -1,11 +1,14 @@
 /* tslint:disable */
 import React from "react";
-import Container from "../../Container/Container.Pages.styled";
-import { LabelBlock, Content } from "./Label.styled";
+import { Content } from "./Label.styled";
+import { LabelBlock } from "../../EditorComponents/EditorComponents.styled";
+import { ButtonBlock } from "../../EditorComponents/EditorComponents.styled";
 
 interface ILabelProps {
   children: string;
+  mode: "Create" | "Edit";
   labelCommand(command: "Save" | "Cancel"): void;
+  disabled: boolean;
 }
 
 class Label extends React.PureComponent<ILabelProps> {
@@ -24,17 +27,21 @@ class Label extends React.PureComponent<ILabelProps> {
   public render() {
     return (
       <LabelBlock>
-        <Container>
-          <Content>
-            <div className="label-name">{this.props.children}</div>
-            <button className="label-button" onClick={this.handleCancelClick}>
-              Cancel
-            </button>
-            <button className="label-button" onClick={this.handleSaveClick}>
-              Save profile
-            </button>
-          </Content>
-        </Container>
+        <Content>
+          <div className="label-name">{this.props.children}</div>
+        </Content>
+        <ButtonBlock>
+          <button className="label-button" onClick={this.handleCancelClick}>
+            Cancel
+          </button>
+          <button
+            disabled={this.props.disabled}
+            className="label-button"
+            onClick={this.handleSaveClick}
+          >
+            {this.props.mode === "Create" ? "Create" : "Save"}
+          </button>
+        </ButtonBlock>
       </LabelBlock>
     );
   }

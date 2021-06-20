@@ -1,24 +1,33 @@
 /* tslint:disable */
 import React from "react";
-import { LongText } from "./TextArea.styled";
+import { StyledTextArea, LongText } from "./TextArea.styled";
 
 export interface ITextAreaProps {
   onChange(text: string): void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
-  children?: string;
+  initValue?: string | number;
+  prependComponent?: JSX.Element;
+  postpendComponent?: JSX.Element;
 }
 
-interface ITextAreaState {
-  value: string;
-}
-
-class TextArea extends React.PureComponent<ITextAreaProps, ITextAreaState> {
+class TextArea extends React.PureComponent<
+  ITextAreaProps,
+  { value: string | number | undefined }
+> {
   constructor(props: ITextAreaProps) {
     super(props);
-    this.state = {
-      value: ""
-    };
     this.handleChange = this.handleChange.bind(this);
+
+    this.state = {
+      value: this.props.initValue
+    };
+  }
+
+  componentWillReceiveProps() {
+    this.setState({
+      value: this.props.initValue
+    });
   }
   public handleChange(event: React.FormEvent<HTMLTextAreaElement>) {
     this.setState({
@@ -26,15 +35,19 @@ class TextArea extends React.PureComponent<ITextAreaProps, ITextAreaState> {
     });
     this.props.onChange(event.currentTarget.value);
   }
+
   public render() {
     return (
-      <LongText
-        onChange={this.handleChange}
-        value={this.state.value}
-        placeholder={this.props.placeholder}
-      >
-        {this.props.children}
-      </LongText>
+      <StyledTextArea>
+        {this.props.prependComponent ? this.props.prependComponent : null}
+        <LongText
+          onKeyPress={this.props.onKeyDown}
+          onChange={this.handleChange}
+          value={this.state.value}
+          placeholder={this.props.placeholder}
+        />
+        {this.props.postpendComponent ? this.props.postpendComponent : null}
+      </StyledTextArea>
     );
   }
 }

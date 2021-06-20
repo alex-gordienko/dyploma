@@ -1,0 +1,33 @@
+{
+    "name": "node-tfjs-retrain",
+    "version": "1.0.0",
+    "description": "Transfer learning demonstration using TensorFlow.js in Node",
+    "main": "app.js",
+    "scripts": {
+        "retrain": "node app.js --images_dir=\"./super\" --model_dir=\"./models\"",
+        "test_model": "node app.js --images_dir=\"../Photoes\" --model_dir=\"./models\" --skip_training"
+    },
+    "author": "Josh Adwell",
+    "license": "ISC",
+    "dependencies": {
+        "@tensorflow/tfjs-node": "^0.3.0",
+        "fast-glob": "^2.2.3",
+        "fs-extra": "^7.0.0",
+        "minimist": "^1.2.3",
+        "node-fetch": "^2.2.0",
+        "sharp": "^0.21.3",
+        "mysql": "^2.18.1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/adwellj/node-tfjs-retrain.git"
+    },
+    "keywords": [
+        "tensorflow",
+        "tensorflow.js",
+        "tfjs",
+        "transfer learning",
+        "image classification",
+        "image retraining"
+    ]
+}

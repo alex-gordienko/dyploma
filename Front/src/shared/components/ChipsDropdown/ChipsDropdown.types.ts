@@ -12,6 +12,7 @@ export interface ISetVisibleAction {
   type: "SET_VISIBLE";
 }
 export interface IResetAction {
-  inputData: string[];
+  inputData: JSX.Element[];
+  alreadySelectedChips: string[];
   type: "RESET";
 }

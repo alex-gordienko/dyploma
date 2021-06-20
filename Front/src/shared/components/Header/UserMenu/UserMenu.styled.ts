@@ -1,5 +1,5 @@
 /* tslint:disable */
-import styled from "@emotion/styled";
+import { styled } from "../../../../styles/styled";
 
 export default styled.div`
   display: flex;
@@ -10,6 +10,8 @@ export default styled.div`
     text-decoration: none;
 
     .user-menu__avatar {
+      max-width: 30px;
+      max-height: 30px;
       margin-right: 10px;
       align-self: flex-end;
     }

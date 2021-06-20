@@ -5,9 +5,11 @@ const lighten = {
   ...variables,
   colors: {
     button: {
-      color: "#A82B11",
-      textColor: "#464444",
-      hoverColor: "#6F49B9",
+      color: "rgba(192,192,192,0.3)",
+      disabledColor: "darkgray",
+      textColor: "black",
+      hoverColor: "#E5000B",
+      hoverDisabledColor: "gray",
       hoverTextColor: "#141414"
     },
     chips: {
@@ -18,17 +20,26 @@ const lighten = {
       background: "#F2F2F2"
     },
     header: {
-      background: "#A82B11",
+      background: "#E5000B",
       primaryText: "#464444",
       primaryTextActive: "#141414",
-      primaryTextHover: "#6F49B9",
+      primaryTextHover: "#FF1B15",
       secondaryText: "#969795"
+    },
+    input: {
+      background: "#FFFFFF",
+      backgroundHover: "#F2F2F2",
+      text: "",
+      textHover: "",
+      border: "#A82B11",
+      borderHover: "#FF1B15"
     },
     primaryBackground: "#FFFFFF",
     primaryBody: "#1B0505",
     secondaryBody: "#626262",
-    secondaryHover: "#F2F2F2",
-    secondarySelection: "#FF0870"
+    secondaryHover: "rgba(192, 192, 192, 0.2)",
+    secondarySelection: "#FF0870",
+    errorColor: "red"
   }
 };
 

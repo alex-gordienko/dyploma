@@ -1,6 +1,6 @@
 /* tslint:disable */
-import styled from "@emotion/styled";
+import { styled } from "../../../styles/styled";
 
 export default styled.div`
-  padding: 35px;
+  max-width: 30%;
 `;

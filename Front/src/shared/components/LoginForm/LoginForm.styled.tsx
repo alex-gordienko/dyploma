@@ -1,5 +1,5 @@
 /* tslint:disable */
-import styled from "@emotion/styled";
+import { styled } from "../../../styles/styled";
 
 export default styled.div`
   width: 500px;
@@ -8,16 +8,17 @@ export default styled.div`
     box-sizing: border-box;
   }
 
-  input[type="text"],
-  input[type="password"] {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    margin-top: 6px;
-    margin-bottom: 16px;
-    resize: vertical;
+  .menu-link {
+    font-family: ${(props: any) => props.theme.fontFamily.body};
+    font-size: ${(props: any) => props.theme.fontSize.body};
+    color: ${(props: any) => props.theme.colors.header.primaryText};
+    text-decoration: none;
+    margin-right: 50px;
+    line-height: 2;
+    position: relative;
+    :hover {
+      color: ${(props: any) => props.theme.colors.header.primaryTextHover};
+    }
   }
   input[type="button"] {
     background-color: #a82b11;

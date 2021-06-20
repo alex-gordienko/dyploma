@@ -1,74 +1,61 @@
 /* tslint:disable */
 import React, { useState, useCallback, useEffect } from "react";
-import Container from "../Container";
+import { NavLink } from "react-router-dom";
+import TextInputItem from "../EditorComponents/EditorTextInput/EditorTextInput.component";
 import Form from "./LoginForm.styled";
+import { ButtonBlock } from "../EditorComponents/EditorComponents.styled";
 
 interface ILoginFormProps {
-  isLogin: (login: string, email: string, pass: string) => void;
+  isLogin: (login: string, pass: string) => void;
 }
 
 const LoginForm = ({ isLogin }: ILoginFormProps) => {
   const [login, setLogin] = useState("");
   const [pass, setPass] = useState("");
-  const [email, setEmail] = useState("");
 
-  const inputLogin = (e: React.FormEvent<HTMLInputElement>) => {
-    setLogin(e.currentTarget.value);
+  const inputLogin = (e: string) => {
+    setLogin(e);
   };
-  const inputPass = (e: React.FormEvent<HTMLInputElement>) => {
-    setPass(e.currentTarget.value);
-  };
-  const inputEmail = (e: React.FormEvent<HTMLInputElement>) => {
-    setEmail(e.currentTarget.value);
+  const inputPass = (e: string) => {
+    setPass(e);
   };
 
   const handleClick = () => {
-    isLogin(login, email, pass);
+    isLogin(login, pass);
   };
 
   return (
-    <Container>
-      <Form>
-        <form>
-          <label>Login</label>
-          <input
-            type="text"
-            id="login"
-            name="loginField"
-            placeholder="Input..."
-            value={login}
-            onChange={inputLogin}
-            required={true}
-          />
-          <label>E-mail</label>
-          <input
-            type="text"
-            id="email"
-            name="emailField"
-            placeholder="E-mail..."
-            value={email}
-            onChange={inputEmail}
-            required={true}
-          />
-          <label>Password</label>
-          <input
-            type="password"
-            id="pass"
-            name="passField"
-            placeholder="Password..."
-            value={pass}
-            onChange={inputPass}
-            required={true}
-          />
-          <input
-            type="button"
-            name="login"
-            value="login"
-            onClick={handleClick}
-          />
-        </form>
-      </Form>
-    </Container>
+    <Form>
+      <TextInputItem
+        required={true}
+        label="Login: "
+        placeholder="Your username in system"
+        lenght="TextInput"
+        value={login}
+        onChange={inputLogin}
+      />
+      <TextInputItem
+        required={true}
+        label="Password: "
+        placeholder="Password..."
+        type="password"
+        lenght="TextInput"
+        value={pass}
+        onChange={inputPass}
+      />
+      <ButtonBlock>
+        <button
+          disabled={login === "" || pass === "" ? true : false}
+          className="label-button"
+          onClick={handleClick}
+        >
+          Log in
+        </button>
+        <NavLink to="/registration" className="label-button">
+          Create Profile
+        </NavLink>
+      </ButtonBlock>
+    </Form>
   );
 };
 

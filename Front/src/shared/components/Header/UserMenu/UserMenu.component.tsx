@@ -1,8 +1,8 @@
 /* tslint:disable */
-import React, { useEffect, useCallback } from "react";
-import DefaultPhoto from "../../../../assets/img/DefaultPhoto.jpg";
+import React, { useEffect, useCallback, useState } from "react";
 import StyledUserMenu from "./UserMenu.styled";
 import { NavLink } from "react-router-dom";
+import DropDownList from "./DropDownList";
 
 interface IBodyBlockProps {
   avatar: string;
@@ -12,6 +12,9 @@ interface IBodyBlockProps {
 }
 
 const UserMenu = ({ avatar, isLogin, logOut, username }: IBodyBlockProps) => {
+  const [visible, setVisible] = useState(false);
+  //onMouseEnter={()=>setVisible(true)}
+  //onMouseLeave={()=>setVisible(false)}
   const LogOut = useCallback(() => {
     logOut();
   }, []);
@@ -19,18 +22,17 @@ const UserMenu = ({ avatar, isLogin, logOut, username }: IBodyBlockProps) => {
     return (
       <StyledUserMenu>
         <a className="user-menu__link" href="User.html">
-          <img
-            className="user-menu__avatar"
-            src={DefaultPhoto}
-            alt="user-photo"
-          />
+          <img className="user-menu__avatar" src={avatar} alt="user-photo" />
         </a>
-        <div className="user-menu__wrapper">
+        <div
+          className="user-menu__wrapper"
+          onMouseEnter={() => setVisible(true)}
+          onMouseLeave={() => setVisible(false)}
+        >
           <div className="user-menu__name">{username}</div>
           <div className="user-menu__role">Admin</div>
-          <a className="user-menu__role" onClick={LogOut}>
-            Log out
-          </a>
+
+          <DropDownList user={username} visible={visible} onLogout={LogOut} />
         </div>
       </StyledUserMenu>
     );

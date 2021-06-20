@@ -11,11 +11,12 @@ export default function Select({ items, className }: ISelectProps) {
   return (
     <StyledSelect className={className}>
       <select>
-        {items.map(item => (
-          <option>{item}</option>
+        {items.map((item, indx) => (
+          <option key={indx} value={item}>
+            {item}
+          </option>
         ))}
       </select>
-      <span />
     </StyledSelect>
   );
 }

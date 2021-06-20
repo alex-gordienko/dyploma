@@ -1,3 +1,13 @@
-Front/build
-Front/coverage
-Front/node_modules
+/Front/node_modules
+/Dump/
+/Photoes/
+/BodyBlock.test.ts
+/BodyBlock.test.ts
+/CountryCity_backup.sql
+/ERA_DB_Backup.sql
+/GoogleMap.Markers.ts
+/Photoes.zip
+/TensoFlow-Retrain-Models/ERA_NeuralBackup_31.05.2020.zip
+/TensoFlow-Retrain-Models/super/
+/NodeServer/node_modules/
+/.vscode/

@@ -1,10 +1,9 @@
 /* tslint:disable */
-import { string } from "prop-types";
 
 const variables = {
   fontFamily: {
     bigTitle: "SF UI Display", // TODO:import other web font instead of SF
-    body: "'Cormorant Unicase', serif",
+    body: "'lucida sans console', serif",
     title: "Open Sans"
   },
   fontSize: {
@@ -21,8 +20,10 @@ const variables = {
 interface IColorPalette {
   button: {
     color: string;
+    disabledColor: string;
     textColor: string;
     hoverColor: string;
+    hoverDisabledColor: string;
     hoverTextColor: string;
   };
   chips: {
@@ -39,11 +40,20 @@ interface IColorPalette {
     primaryTextHover: string;
     secondaryText: string;
   };
+  input: {
+    background: string;
+    backgroundHover: string;
+    text: string;
+    textHover: string;
+    border: string;
+    borderHover: string;
+  };
   primaryBackground: string;
   primaryBody: string;
   secondarySelection: string;
   secondaryBody: string;
   secondaryHover: string;
+  errorColor: string;
 }
 
 interface IFonts {

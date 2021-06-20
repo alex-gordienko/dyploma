@@ -8,43 +8,88 @@ import {
   setVisible,
   reset
 } from "./ChipsDropdown.actions";
-import OptionsDropdown from "../OptionsDropdown";
-import { Input, Container } from "./ChipsDropdown.styled";
+import OptionsDropdown from "../EditorComponents/OptionsDropdown";
+import { Container } from "./ChipsDropdown.styled";
+import Input from "../Input";
 import ChipsList from "../ChipsList";
-import { ITheme } from "../../../styles/variables";
-import { ThemeProvider } from "emotion-theming";
-import lighten from "../../../styles/themes/lighten";
+import {
+  Element,
+  FieldName
+} from "../EditorComponents/EditorComponents.styled";
 
-interface IDropdownProps {
-  inputData: string[];
-  theme?: ITheme;
+interface IVariablesRestriction {
+  type: "only one element";
 }
 
-const InputDropdownChips = ({ inputData, theme }: IDropdownProps) => {
+type IRestrict = IVariablesRestriction;
+
+interface IDropdownProps<IRestrict> {
+  label: string;
+  required?: boolean;
+  restriction?: IRestrict;
+  inputData: JSX.Element[];
+  alreadySelected?: string[];
+  onInputChange?: (username: string) => void;
+  onChoise: (outputData: string[]) => void;
+}
+
+const InputDropdownChips = ({
+  label,
+  required,
+  alreadySelected,
+  inputData,
+  onChoise,
+  onInputChange,
+  restriction
+}: IDropdownProps<IRestrict>) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [{ text, chipsList, filteredData, visible }, dispatch] = useReducer(
     reducer,
     initialState
   );
-  useEffect(() => dispatch(reset(inputData)), [inputData]);
 
-  const onFocus = useCallback(() => {
+  let nullChipsList = alreadySelected ? alreadySelected : [];
+
+  useEffect(() => dispatch(reset(inputData, nullChipsList)), [
+    inputData.length
+  ]);
+
+  useEffect(() => {
+    if (restriction?.type === "only one element") {
+      if (chipsList.length > 1) {
+        dispatch(deleteChips(chipsList[chipsList.length - 1]));
+      }
+    }
+  }, [chipsList, restriction]);
+
+  const onFocus = () => {
     dispatch(setVisible(true));
-  }, []);
-  const inputTextChange = useCallback(
-    (e: React.FormEvent<HTMLInputElement>) => {
-      dispatch(inputText(e.currentTarget.value));
-    },
-    []
-  );
+  };
+
+  const inputTextChange = (e: string) => {
+    dispatch(inputText(e));
+    if (onInputChange) onInputChange(e);
+  };
+
   // If user clicked on element
-  const handleOptionSelect = useCallback((item: string) => {
-    dispatch(addChips(item));
-  }, []);
+  const handleOptionSelect = (item: string) => {
+    console.log(item);
+    if (restriction?.type === "only one element") {
+      if (chipsList.length < 1) {
+        dispatch(addChips(item));
+        onChoise(chipsList.concat(item));
+      }
+    } else {
+      dispatch(addChips(item));
+      onChoise(chipsList.concat(item));
+    }
+  };
+
   // If user want to delete element from ChipsList
-  const deleteChip = useCallback((item: string) => {
+  const deleteChip = (item: string) => {
     dispatch(deleteChips(item));
-  }, []);
+    onChoise(chipsList.filter(elem => elem !== item));
+  };
 
   useEffect(() => {
     if (visible) {
@@ -63,17 +108,24 @@ const InputDropdownChips = ({ inputData, theme }: IDropdownProps) => {
     }
   }, [visible]);
   return (
-    <ThemeProvider theme={theme!}>
-      <Container ref={wrapperRef}>
+    <Container ref={wrapperRef}>
+      <FieldName>{label}</FieldName>
+      <Element>
         <Input
           data-testid="input"
           type="text"
-          value={text}
           onFocus={onFocus}
-          onChange={inputTextChange}
+          onChanged={inputTextChange}
+          restriction={restriction}
         />
         <OptionsDropdown
-          visible={visible}
+          visible={
+            restriction?.type === "only one element"
+              ? chipsList.length >= 1
+                ? false
+                : visible
+              : visible
+          }
           data={filteredData}
           onSelect={handleOptionSelect}
         />
@@ -82,13 +134,9 @@ const InputDropdownChips = ({ inputData, theme }: IDropdownProps) => {
           chipsList={chipsList}
           onDelete={deleteChip}
         />
-      </Container>
-    </ThemeProvider>
+      </Element>
+    </Container>
   );
-};
-
-InputDropdownChips.defaultProps = {
-  theme: lighten
 };
 
 export default InputDropdownChips;

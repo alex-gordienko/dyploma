@@ -1,31 +1,18 @@
 /* tslint:disable */
-import styled from "@emotion/styled";
+import { styled } from "../../../../styles/styled";
 
 const StyledMenu = styled.nav`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  margin-right: 50px;
 
-  .menu-createMarker-button {
-    border-radius: 40px;
-    margin-right: 50px;
-    outline: none;
-    border: 2px solid ${(props: any) => props.theme.colors.primaryBackground};
-    margin-left: 25px;
-  }
-  .button-menu-link {
-    text-decoration: none;
-    font-family: ${(props: any) => props.theme.fontFamily.body};
-    font-size: ${(props: any) => props.theme.fontSize.body};
-    color: ${(props: any) => props.theme.colors.header.primaryTextActive};
-    margin: 5px 10px 0px 10px;
-  }
   .menu-link {
     font-family: ${(props: any) => props.theme.fontFamily.body};
     font-size: ${(props: any) => props.theme.fontSize.body};
     color: ${(props: any) => props.theme.colors.header.primaryText};
     text-decoration: none;
-    margin-right: 50px;
+    margin-left: 50px;
     line-height: 2;
     position: relative;
     :hover {

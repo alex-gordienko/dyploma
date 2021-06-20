@@ -10,7 +10,8 @@ export default styled.header`
   padding-right: 50px;
   width: 100%;
   height: 8vh;
+  min-height: 53px;
   justify-content: space-between;
   align-items: center;
-  background-color: ${(props: any) => props.theme.colors.header.background};
+  background: ${(props: any) => props.theme.colors.header.background};
 `;
