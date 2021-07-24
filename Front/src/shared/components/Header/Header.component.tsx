@@ -13,32 +13,18 @@ interface IHeaderProps {
 }
 
 const Header = ({ avatar, isLogin, LogOut, username }: IHeaderProps) => {
-  if (isLogin) {
-    return (
-      <StyledHeader>
-        <Logo />
-        <Menu />
-        <UserMenu
-          avatar={avatar}
-          isLogin={isLogin}
-          logOut={LogOut}
-          username={username}
-        />
-      </StyledHeader>
-    );
-  } else {
-    return (
-      <StyledHeader>
-        <Logo />
-        <UserMenu
-          avatar={avatar}
-          isLogin={isLogin}
-          logOut={LogOut}
-          username={username}
-        />
-      </StyledHeader>
-    );
-  }
+  return (
+    <StyledHeader>
+      <Logo />
+      {isLogin && <Menu />}
+      <UserMenu
+        avatar={avatar}
+        isLogin={isLogin}
+        logOut={LogOut}
+        username={username}
+      />
+    </StyledHeader>
+  );
 };
 
 export default Header;

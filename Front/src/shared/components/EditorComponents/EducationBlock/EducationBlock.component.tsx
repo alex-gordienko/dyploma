@@ -1,6 +1,6 @@
 /* tslint:disable */
 import React, { useState } from "react";
-import TextArea from "../../TextArea";
+import TextArea from "../TextArea";
 import { StyledEducationBlock } from "./EducationBlock.styled";
 import { SubHeader } from "../EditorComponents.styled";
 

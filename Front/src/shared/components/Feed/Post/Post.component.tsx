@@ -20,7 +20,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { IPost, IPhotoBuffer, IComment } from "../../../../App.types";
 import defaultAvatar from "../../../../assets/img/DefaultPhoto.jpg";
-import Input from "../../Input";
+import Input from "../../EditorComponents/Input";
 import Preloader from "../../Preloader";
 import { NavLink } from "react-router-dom";
 import {
@@ -169,7 +169,7 @@ const Post = (mode: IPostProps) => {
               mode.comments.map((comment: IComment, indx: number) => {
                 return (
                   <Comment key={indx} Rating={comment.userRating}>
-                    <Delimeter />
+                    <Delimeter type="horizontal" />
                     <div className="blocks">
                       <div className="left-block">
                         <div className="setRate">+</div>
@@ -208,7 +208,7 @@ const Post = (mode: IPostProps) => {
           )}
         </Comments>
       </Footer>
-      <Delimeter />
+      <Delimeter type="horizontal" />
     </StyledPost>
   ) : (
     <StyledPost key={mode.item.idPost}>
@@ -269,7 +269,7 @@ const Post = (mode: IPostProps) => {
       <Footer>
         <p onClick={handleClick}>Show comments</p>
       </Footer>
-      <Delimeter />
+      <Delimeter type="horizontal" />
     </StyledPost>
   );
 };

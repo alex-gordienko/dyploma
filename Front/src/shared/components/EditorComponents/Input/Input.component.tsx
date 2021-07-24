@@ -1,23 +1,20 @@
 /* tslint:disable */
 import React, { useState, useEffect } from "react";
 import StyledInput from "./Input.styled";
-import { ErrorOnInput } from "../EditorComponents/EditorComponents.styled";
+import { ErrorOnInput } from "../EditorComponents.styled";
 
 interface IEditorLengthRestriction {
   type: "min length";
   length: number;
 }
-
 interface IEditorDataTypeRestriction {
   type: "type";
   restrict: "string" | "number";
 }
-
 interface IEditorSameRestriction {
   type: "same";
   with: string | number;
 }
-
 interface IEditorVariablesRestriction {
   type: "only one element";
 }

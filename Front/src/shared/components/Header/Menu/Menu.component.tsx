@@ -10,29 +10,29 @@ const Menu = () => (
       <NavLink to="/postEditor/new" className="label-button">
         Create Post
       </NavLink>
+      <NavLink
+        exact={true}
+        to="/"
+        className="menu-link"
+        activeClassName="menu-link--active"
+      >
+        Main Page
+      </NavLink>
+      <NavLink
+        to="/friendlist"
+        className="menu-link"
+        activeClassName="menu-link--active"
+      >
+        Friend's list
+      </NavLink>
+      <NavLink
+        to="/chatlist"
+        className="menu-link"
+        activeClassName="menu-link--active"
+      >
+        Chat
+      </NavLink>
     </ButtonBlock>
-    <NavLink
-      exact={true}
-      to="/"
-      className="menu-link"
-      activeClassName="menu-link--active"
-    >
-      Main Page
-    </NavLink>
-    <NavLink
-      to="/friendlist"
-      className="menu-link"
-      activeClassName="menu-link--active"
-    >
-      Friend's list
-    </NavLink>
-    <NavLink
-      to="/chatlist"
-      className="menu-link"
-      activeClassName="menu-link--active"
-    >
-      Chat
-    </NavLink>
   </StyledMenu>
 );
 

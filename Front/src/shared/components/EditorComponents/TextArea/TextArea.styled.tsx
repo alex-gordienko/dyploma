@@ -1,9 +1,8 @@
 /* tslint:disable */
-import { styled } from "../../../styles/styled";
-import variables from "../../../styles/variables";
+import { styled } from "../../../../styles/styled";
+import variables from "../../../../styles/variables";
 
 export const StyledTextArea = styled.div`
-  margin: 5px;
   width: 100%;
   display: inline-flex;
 `;

@@ -1,13 +1,15 @@
 /* tslint:disable */
-import { styled } from "../../../styles/styled";
+import { styled } from "../../../../styles/styled";
 
 export default styled.div`
   display: flex;
   align-items: center;
   width: 100%;
+  justify-content: center;
 
   .field {
     margin-right: 5px;
+    width: 100%;
     input {
       background-color: transparent;
       font-family: ${props => props.theme.fontFamily.body};

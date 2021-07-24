@@ -5,11 +5,11 @@ const lighten = {
   ...variables,
   colors: {
     button: {
-      color: "rgba(192,192,192,0.3)",
-      disabledColor: "darkgray",
+      color: "darkgray",
+      disabledColor: "rgba(192,192,192,0.3)",
       textColor: "black",
       hoverColor: "#E5000B",
-      hoverDisabledColor: "gray",
+      hoverDisabledColor: "rgba(192,192,192,0.3)",
       hoverTextColor: "#141414"
     },
     chips: {

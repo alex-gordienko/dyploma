@@ -7,6 +7,5 @@ export default styled.div`
   color: ${props => props.theme.colors.primaryBackground};
   justify-content: space-between;
   align-items: center;
-  margin-left: 40px;
   display: inline-flex;
 `;

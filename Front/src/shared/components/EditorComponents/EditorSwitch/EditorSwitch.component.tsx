@@ -1,7 +1,7 @@
 /* tslint:disable */
 import React, { useState } from "react";
-import Input from "../../Input";
-import TextArea from "../../TextArea";
+import Input from "../Input";
+import TextArea from "../TextArea";
 import StyledTextInput from "./EditorSwitch.styled";
 import { FieldName, Element } from "../EditorComponents.styled";
 

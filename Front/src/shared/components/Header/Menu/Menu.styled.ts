@@ -5,14 +5,17 @@ const StyledMenu = styled.nav`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  align-items: center;
   margin-right: 50px;
+  width: 40%;
 
   .menu-link {
     font-family: ${(props: any) => props.theme.fontFamily.body};
     font-size: ${(props: any) => props.theme.fontSize.body};
     color: ${(props: any) => props.theme.colors.header.primaryText};
     text-decoration: none;
-    margin-left: 50px;
+    width: max-content;
+    margin: auto;
     line-height: 2;
     position: relative;
     :hover {
