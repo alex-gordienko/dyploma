@@ -7,10 +7,10 @@ const variables = {
     title: "Open Sans"
   },
   fontSize: {
-    body: "15px", // TODO: check all files and change names in styled components
-    header: "20px",
-    small: "10px",
-    title: "20px"
+    body: "2vh", // TODO: check all files and change names in styled components
+    header: "2.8vh",
+    small: "1.6vh",
+    title: "3vh"
   },
   textArea: {
     height: "108px"

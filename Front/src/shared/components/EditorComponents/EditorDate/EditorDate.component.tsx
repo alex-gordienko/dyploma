@@ -1,7 +1,7 @@
 /* tslint:disable */
 import React from "react";
 import StyledDate from "./EditorDate.styled";
-import Input from "../../Input";
+import Input from "../Input";
 import { FieldName, Element, ErrorOnInput } from "../EditorComponents.styled";
 
 interface IDateEditorProps {

@@ -1,7 +1,7 @@
 /* tslint:disable */
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import OptionsDropdown from "../OptionsDropdown";
-import Input from "../../Input";
+import Input from "../Input";
 import StyledEditorAutocomplete from "./EditorAutoComplete.styled";
 import { FieldName, Element } from "../EditorComponents.styled";
 

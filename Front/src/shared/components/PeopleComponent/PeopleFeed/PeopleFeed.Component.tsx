@@ -48,7 +48,7 @@ const PeopleFeed = ({
         return (
           <div key={indx}>
             <People key={item.idUsers} item={item} onClick={onSelect} />
-            <Delimeter />
+            <Delimeter type="horizontal" />
           </div>
         );
       })}

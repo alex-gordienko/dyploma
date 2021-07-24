@@ -36,7 +36,7 @@ const Chats = ({ data, onSelect, onEdit, onDelete }: IFeedProps) => {
                   onEdit(item);
                 }}
               />
-              <Delimeter />
+              <Delimeter type="horizontal" />
             </div>
           );
         })}

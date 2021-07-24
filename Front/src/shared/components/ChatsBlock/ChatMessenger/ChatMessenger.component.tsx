@@ -17,8 +17,8 @@ import {
   ButtonBlock
 } from "../../EditorComponents/EditorComponents.styled";
 import { IChat, IFullDataUser, IMessage } from "../../../../App.types";
-import Input from "../../Input";
-import TextArea from "../../TextArea";
+import Input from "../../EditorComponents/Input";
+import TextArea from "../../EditorComponents/TextArea";
 import Modal from "../../Modal";
 import defaultAvatar from "../../../../assets/img/DefaultPhoto.jpg";
 import { ReactComponent as Cross } from "../../../../assets/icons/cross.svg";

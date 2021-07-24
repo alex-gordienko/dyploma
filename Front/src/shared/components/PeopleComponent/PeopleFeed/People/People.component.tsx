@@ -14,7 +14,7 @@ import {
 } from "./People.styled";
 import { ISearchedUser } from "../../../../../App.types";
 import defaultAvatar from "../../../../../assets/img/DefaultPhoto.jpg";
-import Input from "../../../Input";
+import Input from "../../../EditorComponents/Input";
 import { Redirect, NavLink } from "react-router-dom";
 import { ButtonBlock } from "../../../EditorComponents/EditorComponents.styled";
 

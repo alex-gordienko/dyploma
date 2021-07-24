@@ -1,7 +1,7 @@
 /* tslint:disable */
 import React, { useState } from "react";
-import Input from "../../Input";
-import TextArea from "../../TextArea";
+import Input from "../Input";
+import TextArea from "../TextArea";
 import StyledTextInput from "./EditorTextInput.styled";
 import { FieldName, Element } from "../EditorComponents.styled";
 
@@ -58,7 +58,7 @@ export default function InputEditorItem({
     <StyledTextInput key={key}>
       <FieldName>
         {label}
-        {required ? "*" : ""}
+        {required && " *"}
       </FieldName>
       <Element>
         {lenght === "TextInput" ? (
@@ -75,14 +75,12 @@ export default function InputEditorItem({
             restriction={restriction}
           />
         ) : (
-          <div className="long-text">
-            <TextArea
-              key={key}
-              initValue={value}
-              onChange={onChange}
-              placeholder={placeholder}
-            />
-          </div>
+          <TextArea
+            key={key}
+            initValue={value}
+            onChange={onChange}
+            placeholder={placeholder}
+          />
         )}
       </Element>
     </StyledTextInput>

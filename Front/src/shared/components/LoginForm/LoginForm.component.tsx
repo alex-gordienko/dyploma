@@ -2,8 +2,12 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import TextInputItem from "../EditorComponents/EditorTextInput/EditorTextInput.component";
-import Form from "./LoginForm.styled";
-import { ButtonBlock } from "../EditorComponents/EditorComponents.styled";
+import Form, { LogoContainer } from "./LoginForm.styled";
+import {
+  ButtonBlock,
+  Delimeter
+} from "../EditorComponents/EditorComponents.styled";
+import { ReactComponent as LogoIcon } from "../../../assets/icons/fullLogo.svg";
 
 interface ILoginFormProps {
   isLogin: (login: string, pass: string) => void;
@@ -26,6 +30,11 @@ const LoginForm = ({ isLogin }: ILoginFormProps) => {
 
   return (
     <Form>
+      <LogoContainer>
+        <LogoIcon width="80px" height="80px" />
+        <Delimeter type="vertical" />
+        <p>Eternal Radiance</p>
+      </LogoContainer>
       <TextInputItem
         required={true}
         label="Login: "

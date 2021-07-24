@@ -15,9 +15,11 @@ export const Element = styled.div`
 
 export const StyledEditor = styled.div`
   display: flex;
-  margin: 10px auto;
   flex-flow: row;
-  max-width: 100vh;
+  align-items: center;
+  justify-content: center;
+  width: min-content;
+  margin: auto;
 `;
 
 export const PhotoBlock = styled.div`
@@ -36,11 +38,12 @@ export const Photo = styled.img`
 
 export const EditorForm = styled.div`
   display: flex;
+  width: min-content;
   flex-flow: wrap;
   font-family: ${props => props.theme.fontFamily.body};
   font-size: ${props => props.theme.fontSize.body};
   color: ${props => props.theme.colors.primaryBackground};
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 29px;
+  margin-left: 30px;
 `;

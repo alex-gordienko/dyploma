@@ -128,7 +128,7 @@ const App = () => {
   // error => )
 
   const login = (bufLogin: string, bufPass: string) => {
-    const formData = { login: bufLogin, pass: bufPass, token: token };
+    const formData = { login: bufLogin, pass: bufPass, token };
     sendToServer(socket, "Client Login Request", formData);
   };
   async function startProject() {
@@ -356,6 +356,31 @@ const App = () => {
     );
   };
 
+  const renderMain = () => {
+    if (errorMessage.length) {
+      return <ErrorPage type="serverError" message={errorMessage} />;
+    }
+    if (!user.isConfirm) {
+      return <ErrorPage type="nonValid" user={user} />;
+    }
+    if (user.isBanned) {
+      return <ErrorPage type="banned" user={user} reason={"Test"} />;
+    }
+    return (
+      <Switch>
+        <Route exact={true} path="/" component={MainPage} />
+        <Route path="/friendlist/:username" component={FriendList} />
+        <Route path="/friendlist/" component={FriendList} />
+        <Route path="/chatlist" component={Chat} />
+        <Route path="/profile/:username" component={ProfileViewer} />
+        <Route path="/edit" component={ProfileEdit} />
+        <Route path="/postEditor/:postID" component={PostEditor} />
+        <Route path="/login" component={loginPage} />
+        <Route path="/registration" component={ProfileEdit} />
+      </Switch>
+    );
+  };
+
   return (
     <BrowserRouter>
       <ThemeProvider theme={lighten}>
@@ -366,29 +391,7 @@ const App = () => {
             username={user.username}
             LogOut={LogOut}
           />
-          {errorMessage === "" ? (
-            user.isConfirm ? (
-              !user.isBanned ? (
-                <Switch>
-                  <Route exact={true} path="/" component={MainPage} />
-                  <Route path="/friendlist/:username" component={FriendList} />
-                  <Route path="/friendlist/" component={FriendList} />
-                  <Route path="/chatlist" component={Chat} />
-                  <Route path="/profile/:username" component={ProfileViewer} />
-                  <Route path="/edit" component={ProfileEdit} />
-                  <Route path="/postEditor/:postID" component={PostEditor} />
-                  <Route path="/login" component={loginPage} />
-                  <Route path="/registration" component={ProfileEdit} />
-                </Switch>
-              ) : (
-                <ErrorPage type="banned" user={user} reason={"Test"} />
-              )
-            ) : (
-              <ErrorPage type="nonValid" user={user} />
-            )
-          ) : (
-            <ErrorPage type="serverError" message={errorMessage} />
-          )}
+          {renderMain()}
         </Container>
       </ThemeProvider>
     </BrowserRouter>

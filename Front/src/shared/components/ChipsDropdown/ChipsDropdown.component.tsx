@@ -10,7 +10,7 @@ import {
 } from "./ChipsDropdown.actions";
 import OptionsDropdown from "../EditorComponents/OptionsDropdown";
 import { Container } from "./ChipsDropdown.styled";
-import Input from "../Input";
+import Input from "../EditorComponents/Input";
 import ChipsList from "../ChipsList";
 import {
   Element,

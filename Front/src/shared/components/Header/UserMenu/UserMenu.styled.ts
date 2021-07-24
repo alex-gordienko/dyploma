@@ -5,6 +5,8 @@ export default styled.div`
   display: flex;
   color: ${(props: any) => props.theme.colors.primaryBody};
   height: 30px;
+  margin: auto 50px auto 0;
+  align-items: center;
 
   .user-menu__link {
     text-decoration: none;
