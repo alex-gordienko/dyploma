@@ -1,10 +1,26 @@
-const express = require('express');
-const fs = require("fs");
-const path = require('path');
-const Home = require("./routes/Home");
-const cors = require('cors');
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import Home from './routes/Home';
+import cors from 'cors';
+import mysql from 'mysql';
 
-const app = express();
+export const connectDB = async(): Promise<mysql.Connection | null> => {
+    try{
+        const con = await mysql.createConnection({
+            host: 'localhost',
+            user: 'alexoid1999',
+            password: '18ebyhwb',
+            database: 'RadianceEternal'
+        });
+        return con;
+    } catch(err){
+        console.error(err.message);
+        return null;
+    }
+}
+
+const app: express.Express = express();
 
 app.use(cors());
 
@@ -30,7 +46,7 @@ app.all('*',(request, response) => {
 
 const port = process.env.PORT || 5001;
 
-server = app.listen(port,()=>{
+const server = app.listen(port,()=>{
     console.log(`App Started at port ${port}`);
 });
 

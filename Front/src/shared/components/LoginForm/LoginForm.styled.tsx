@@ -3,6 +3,7 @@ import { styled } from "../../../styles/styled";
 
 export default styled.div`
   width: 30%;
+  min-width: 300px;
   margin: auto;
   display: flex;
   flex-direction: column;

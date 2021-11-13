@@ -10,6 +10,8 @@ export const ErrorPageBlock = styled.div`
   display: inline-flex;
   width: 800px;
   margin: 25vh auto;
+  flex-wrap: wrap;
+  align-items: center;
   * {
     box-sizing: border-box;
   }
@@ -17,4 +19,5 @@ export const ErrorPageBlock = styled.div`
 
 export const Error = styled.p`
   margin: 20px auto;
+  width: 40%;
 `;

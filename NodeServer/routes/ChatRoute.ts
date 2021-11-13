@@ -1,19 +1,4 @@
-var mysql = require('mysql');
-const fs = require('fs');
-
-const connectDB = async()=>{
-    try{
-        var con = await mysql.createConnection({
-            host: 'localhost',
-            user: 'alexoid1999',
-            password: '18ebyhwb',
-            database: 'RadianceEternal'
-        });
-        return con;
-    } catch(err){
-        console.error(err.message);
-    }
-}
+import fs from 'fs';
 
 const ChatRoute = (socket, con)=>{
         //  формат входящих сообщений для сокетов - {command, {'user':user, 'data': data})}
@@ -60,7 +45,7 @@ const ChatRoute = (socket, con)=>{
 
                                         fs.exists("./messages/"+JSONmessenger.chatID+'.json', async (exists)=>{
                                             if(exists){
-                                                let rawdata =  JSON.parse(fs.readFileSync("./messages/"+JSONmessenger.chatID+'.json'));
+                                                let rawdata =  JSON.parse(fs.readFileSync("./messages/"+JSONmessenger.chatID+'.json').toString());
                                                 JSONmessenger.lastMessage = rawdata[rawdata.length-1];
                                             }
                                             else JSONmessenger.lastMessage = {};
@@ -93,7 +78,7 @@ const ChatRoute = (socket, con)=>{
 
                                     fs.exists("./messages/"+JSONmessenger.chatID+'.json', async (exists)=>{
                                         if(exists){
-                                            let rawdata =  JSON.parse(fs.readFileSync("./messages/"+JSONmessenger.chatID+'.json'));
+                                            let rawdata =  JSON.parse(fs.readFileSync("./messages/"+JSONmessenger.chatID+'.json').toString());
                                             JSONmessenger.lastMessage = rawdata[rawdata.length-1];
                                         }
                                         else JSONmessenger.lastMessage = {};
@@ -298,4 +283,4 @@ const ChatRoute = (socket, con)=>{
         })
 };
 
-module.exports = ChatRoute;
+export default ChatRoute;

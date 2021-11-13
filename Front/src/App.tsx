@@ -137,8 +137,7 @@ const App = () => {
     const data: ISavedUser = await getStateFromStorage("savedUser");
     await login(data.username, data.password);
     await dispatch(setProgress("Update info about you..."));
-    const postData1 = '{ "operation": "get contries" }';
-    sendToServer(socket, "get countries", postData1);
+    sendToServer(socket, "Get countries", { operation: "Get contries" });
     await dispatch(setProgress("Ready..."));
     await dispatch(isLoading(true));
   }

@@ -220,7 +220,7 @@ const BodyBlock = ({
     let postData = isAnotherUser
       ? {
           operation: postType,
-          json: {
+          data: {
             username: isAnotherUser,
             currentUser: currentUser.idUsers,
             filters: JSON.stringify(nullFilter),

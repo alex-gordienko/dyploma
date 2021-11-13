@@ -1,29 +1,15 @@
-var mysql = require('mysql');
-const fs = require('fs');
-const ChatRoute = require('./ChatRoute');
+// import ChatRoute from './ChatRoute';
+import User from './DataParserScripts/userGetter';
+import PostGetter from './DataParserScripts/postGetter';
+import PostSetter from './DataParserScripts/postSetter';
+import { Server as httpServer } from 'http';
+import {Socket, Server as SocketIOServer} from 'socket.io';
+import { connectDB } from '..';
 
-const User = require('./DataParserScripts/userGetter');
-const PostGetter = require('./DataParserScripts/postGetter');
-const PostSetter = require('./DataParserScripts/postSetter');
+const Home = (server: httpServer)=>{
+    const io = new SocketIOServer(server, {serveClient: false, pingTimeout:60000});
 
-const connectDB = async()=>{
-    try{
-        var con = await mysql.createConnection({
-            host: 'localhost',
-            user: 'alexoid1999',
-            password: '18ebyhwb',
-            database: 'RadianceEternal'
-        });
-        return con;
-    } catch(err){
-        console.error(err.message);
-    }
-}
-
-const Home = (server)=>{
-    const io = require('socket.io')(server, {serveClient: false, pingTimeout:60000});
-
-    io.on('connection', async socket =>{
+    io.on('connection', async (socket: Socket) =>{
         console.log('\n\x1b[0m New connection');
         //Для каждого сокета создаётся экземпляр коннектора БД, пользователя и парсера 
         const con = await connectDB();
@@ -41,44 +27,46 @@ const Home = (server)=>{
         //
 
         //Подключаем кусок обработчиков для чата
-        ChatRoute(socket, con);        
+        // ChatRoute(socket, con);        
 
         //Обработчик запросов для авторизации
-        socket.on('Client Login Request', async msg =>{
-            if(msg.login && msg.login!==''){
-                console.log(`\x1b[33m Client ${msg.login} is connecting...`);
+        socket.on('Client Login Request',
+            async (msg: socket.ISocketRequest<api.models.ILoginRequest>) => {
+            if(msg.data.login && msg.data.login!==''){
+                console.log(`\x1b[33m Client ${msg.data.login} is connecting...`);
                 socket.join(msg.token);
                 try{
-                    user.Login(msg)
-                        .then((result)=>{
-                            console.log(`\t\x1b[32m Client ${msg.login} with token ${msg.token} is connected succesfully`);
+                    user.Login(msg.data)
+                        .then((result: socket.ISocketResponse<api.models.IUser>)=>{
+                            console.log(`\t\x1b[32m Client ${msg.data.login} with token ${msg.token} is connected succesfully`);
                             socket.emit('Client Login Response', result);
                             user.id = result.result.idUsers;
                             user.name = result.result.username;
                             user.token = msg.token;
                         })
                         .catch((rejected)=>{
-                            console.log(`\t\x1b[31m Client ${msg.login} connection Error: \n\t${rejected}`);
+                            console.log(`\t\x1b[31m Client ${msg.data.login} connection Error: \n\t${rejected}`);
                             socket.emit('Client Login Response', {'status': 'Server Error', 'result': rejected})
                         });
                 }
                 catch(e){
-                    console.log(`\t\x1b[31m Client ${msg.login} connection Error: \n\t${e}`);
+                    console.log(`\t\x1b[31m Client ${msg.data.login} connection Error: \n\t${e}`);
                     socket.emit('Client Login Response', {'status': 'Server Error', 'result': e})
                 }
             }            
         });
 
         //Обработчик запросов для работы с постами
-        socket.on('Get Posts Request', async msg =>{
+        socket.on('Get Posts Request',
+            async (msg: socket.ISocketRequest<api.models.IGetPostsRequest>) => {
             switch (msg.operation) {
                 //Получить 4 поста, начиная с n-го (пагинация) и отправить
                 case 'get all posts':{
                     try{
                         console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get posts`);
-                        console.log(`\tHe already have ${msg.postIDs.length} posts`);
+                        console.log(`\tHe already have ${msg.data.postIDs.length} posts`);
                         // Получаем посты
-                        postGetter.getAllPosts(msg.operation, msg.postIDs)
+                        postGetter.getAllPosts(msg.operation, msg.data.postIDs)
                             .then(postsPattern=>{
                                 // Затем для каждого получаем лайки
                                 console.log(`\t\x1b[32m Server is look for ${postsPattern.length} posts`);
@@ -110,10 +98,10 @@ const Home = (server)=>{
                 //Получить 4 публичных поста конкретного пользователя, начиная с n-го (пагинация) и отправить
                 case 'get user public posts':{
                     try{
-                        console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get ${msg.json.username}'s posts`);
-                        console.log(`\tHe already have ${msg.json.postIDs.length} posts`);
+                        console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get ${msg.data.username}'s posts`);
+                        console.log(`\tHe already have ${msg.data.postIDs.length} posts`);
                         // Получаем посты
-                        postGetter.getUserPublicPosts(msg.operation, msg.json.username, msg.json.postIDs)
+                        postGetter.getUserPublicPosts(msg.operation, msg.data.username, msg.data.postIDs)
                             .then(postsPattern=>{
                                 // Затем для каждого получаем лайки
                                 console.log(`\t\x1b[32m Server is look for ${postsPattern.length} posts`);
@@ -146,14 +134,14 @@ const Home = (server)=>{
                 //Получить 4 приватных поста конкретного пользователя, начиная с n-го (пагинация) и отправить
                 case 'get user private posts':{
                     try{
-                        console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get ${msg.json.username}'s private posts`);
-                        if(user.id!==msg.json.currentUser || user.name!==msg.json.username){
+                        console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get ${msg.data.username}'s private posts`);
+                        if(user.id!==msg.data.currentUser || user.name!==msg.data.username){
                             console.log(`\x1b[0m Request Denied \x1b[31m '${msg.operation}'`)
                         }
                         else{
-                            console.log(`\tHe already have ${msg.json.postIDs.length} posts`);
+                            console.log(`\tHe already have ${msg.data.postIDs.length} posts`);
                             // Получаем посты
-                            postGetter.getUserPrivatePosts(msg.operation, msg.json.username, msg.json.postIDs)
+                            postGetter.getUserPrivatePosts(msg.operation, msg.data.username, msg.data.postIDs)
                                 .then(postsPattern=>{
                                     // Затем для каждого получаем лайки
                                     console.log(`\t\x1b[32m Server is look for ${postsPattern.length} posts`);
@@ -187,7 +175,7 @@ const Home = (server)=>{
                 case 'get comments':{
                     try{
                         console.log(`\n\x1b[33m User ${user.name} is trying to get comments to post #${msg.postID}`);
-                        postGetter.getComments(msg.operation,msg.postID)
+                        postGetter.getComments(msg.operation, msg.postID)
                             .then((resolve)=>{
                                 console.log(`\t\x1b[32m Sending comments to post #${msg.postID}...`)
                                 socket.emit('Get Posts Response', resolve)
@@ -202,14 +190,14 @@ const Home = (server)=>{
                 //Создать комментарий и отправить подтверждение/ошибку
                 case 'create comment':{
                     try{
-                        console.log(`\n\x1b[33m User ${user.name} is commenting post #${msg.json.idPost}`);
-                        postSetter.createComment(msg.operation,msg.json)
+                        console.log(`\n\x1b[33m User ${user.name} is commenting post #${msg.data.idPost}`);
+                        postSetter.createComment(msg.operation,msg.data)
                             .then(resolve=>{
-                                console.log(`\t\x1b[32m Comment to post #${msg.json.idPost} is created successful`);
+                                console.log(`\t\x1b[32m Comment to post #${msg.data.idPost} is created successful`);
                                 socket.emit('Get Posts Response', resolve)
                             })
                             .catch(reject=>{
-                                console.log(`\tComment to post #${msg.json.idPost} error!`);
+                                console.log(`\tComment to post #${msg.data.idPost} error!`);
                                 socket.emit('Get Posts Response', reject)
                             })
                     }
@@ -229,14 +217,20 @@ const Home = (server)=>{
 
         })
 
-        socket.on('Post Editor Request', async msg=>{
+        socket.on('Post Editor Request', async msg => {
             switch (msg.operation){
                 case 'create post':{
                     console.log(`\n\x1b[33m User ${user.name} is trying to create new post...`);
                     postSetter.createPost(msg.operation, msg.json)
                         .then(()=>{
                             console.log(`\t\x1b[32m Successful create post. Gettin ID post...`);
-                            return postGetter.getIDPost(msg.json.Name, msg.json.date, msg.json.idUser)
+                            return postGetter
+                                .getIDPost(
+                                    msg.operation,
+                                    msg.json.Name,
+                                    msg.json.date,
+                                    msg.json.idUser
+                                )
                         })
                         .then(idPost=>{
                             console.log(`\t\x1b[32m Post ID is #${idPost}. \n Setting new photoes...`);
@@ -280,4 +274,4 @@ const Home = (server)=>{
     })
 };
 
-module.exports = Home;
+export default Home;

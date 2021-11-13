@@ -1,16 +1,20 @@
 const fs = require('fs');
+import { Connection } from 'mysql';
+import { Socket } from 'socket.io';
 
-class PostSetter{
+class PostSetter {
+    protected dbConnector: Connection;
+    protected socket: Socket;
+    // Директория с папками фотографий
+    protected readonly photoDirectory = `/srv/windows/dyploma/Photoes/`;
+
     constructor(dbConnector, socket){
-        this.dbConnector=dbConnector;
+        this.dbConnector = dbConnector;
         this.socket = socket;
-        // Директория с папками фотографий
-        this.photoDirectory = `/srv/windows/dyploma/Photoes/`;
     }
 
     createPost(operation, post){
         let con = this.dbConnector;
-        let socket = this.socket;
         return new Promise((resolve, reject)=>{
         //Запрос 1. 
         con.query(`INSERT INTO Post (Name, lat, lng, comment, date, Users_idUsers, type, isCheck, isPrivate) VALUES (
@@ -23,7 +27,7 @@ class PostSetter{
             1,
             0,
             ${post.isPrivate})`, 
-        async function(err,postsData){
+        async function(err, postsData){
             if(err) {
                 //Если ошибка подключения к бд
                 reject({operation, status: 'SQL Error', result: err});
@@ -83,4 +87,4 @@ class PostSetter{
 }
 
 
-module.exports = PostSetter
+export default PostSetter

@@ -1,0 +1,49 @@
+Arguments: 
+  /home/alexoid1999/.nvm/versions/node/v16.0.0/bin/node /usr/share/yarn/bin/yarn.js add lodash @types/lodash
+
+PATH: 
+  /home/alexoid1999/.nvm/versions/node/v16.0.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+Yarn version: 
+  1.22.15
+
+Node version: 
+  16.0.0
+
+Platform: 
+  linux x64
+
+Trace: 
+  Error: EACCES: permission denied, unlink '/srv/windows/dyploma/NodeServer/node_modules/@types/.node-Ieycp4et/LICENSE'
+
+npm manifest: 
+  {
+    "name": "chatserver",
+    "version": "1.0.0",
+    "description": "server-side Node.JS Chat-Server",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "alexoid1999",
+    "license": "ISC",
+    "dependencies": {
+      "concurrently": "^5.1.0",
+      "config": "^3.3.1",
+      "cors": "^2.8.5",
+      "express": "^4.17.1",
+      "gm": "^1.23.1",
+      "jimp": "^0.16.1",
+      "mysql": "^2.18.1",
+      "nodemon": "^2.0.3",
+      "save": "^2.4.0",
+      "socket.io": "^2.3.0"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
