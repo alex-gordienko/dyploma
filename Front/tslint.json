@@ -7,6 +7,9 @@
     ],
     "jsRules": {},
     "rules": {
+        "no-namespace": false,
+        "no-internal-module": false,
+        "no-empty-interface": false,
         "ban-types": false,
         "jsx-no-lambda": false,
         "no-shadowed-variable": false,

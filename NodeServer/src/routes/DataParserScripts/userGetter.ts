@@ -1,10 +1,10 @@
-import { Connection } from 'mysql';
+import { Connection } from 'mysql2';
 class User {
     protected userID: number;
     protected username: string;
     protected identificator: string;
     protected dbConnector: Connection;
-    
+
     constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
         this.userID = 0;
@@ -15,29 +15,32 @@ class User {
     get id(){
         return this.userID;
     }
+
+    set id(id){
+        this.userID = id;
+    }
+
     get name(){
         return this.username;
     }
+
+    set name(name){
+        this.username = name;
+    }
+
     get token(){
         return this.identificator;
     }
-    set id(id){
-        this.userID=id;
-    }
-    set name(name){
-        this.username=name;
-    }
+
     set token(t){
-        this.identificator=t;
+        this.identificator = t;
     }
-    
-    
 
     public async Login (
         user: api.models.ILoginRequest
     ): Promise<socket.ISocketResponse<api.models.IUser>> {
         const rawGetUserQuery =
-            `SELECT idUsers, 
+            `SELECT idUsers,
                 regDate,
                 isConfirm,
                 isBanned,
@@ -54,33 +57,40 @@ class User {
                 avatar,
                 crypt_pass AS password
             FROM Users
-            WHERE username='${user.login}' 
-            AND crypt_pass='${user.pass}' 
-            OR email= '${user.login}' 
+            WHERE username='${user.login}'
+            AND crypt_pass='${user.pass}'
+            OR email= '${user.login}'
             AND crypt_pass='${user.pass}'`;
-        
-        return new Promise((resolve, reject)=>{
+
+        return new Promise((
+            resolve: (value: socket.ISocketResponse<api.models.IUser>) => void,
+            reject: (reason: socket.ISocketErrorResponse) => void
+        ) => {
             this.dbConnector.query(rawGetUserQuery,
                 async (err, userData) => {
                     if(err) {
-                        //Если ошибка подключения к бд
+                        // Если ошибка подключения к бд
                         reject({
                             status: 'SQL Error',
-                            result: err
+                            operation: 'Client Login Response',
+                            result: JSON.stringify(err)
                         });
                     }
                     else{
-                        //Если подключился и запрос что-то вернул
-                        let JSONuserData = JSON.parse(JSON.stringify(userData))[0];
-                        //Если у пользователя есть аватарка, переводим её в base64
+                        // Если подключился и запрос что-то вернул
+                        const JSONuserData = JSON.parse(JSON.stringify(userData))[0];
+                        // Если у пользователя есть аватарка, переводим её в base64
                         if(JSONuserData && JSONuserData.avatar!==null) JSONuserData.avatar = Buffer.from(JSONuserData.avatar).toString();
 
                         if(JSONuserData){
-                            //Сохраняем в объекте класса айди пользователя для дальнейших манипуляций
+                            // Сохраняем в объекте класса айди пользователя для дальнейших манипуляций
                             resolve({
                                 status: 'OK',
-                                operation: 'Client Login Request',
-                                result: JSONuserData
+                                operation: 'Client Login Response',
+                                data: {
+                                    requestFor: 'Client Login Response',
+                                    response: JSONuserData
+                                }
                             });
                         }
                         else {

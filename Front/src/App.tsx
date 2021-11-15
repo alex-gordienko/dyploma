@@ -18,7 +18,7 @@ import ChatsFeed from "./shared/components/ChatsBlock";
 import ErrorPage from "./shared/Pages/ErrorPage";
 import io from "socket.io-client";
 
-import { ServerAdress, httpPost } from "../src/backend/httpGet";
+import { ServerAdress, sendToSocket } from "../src/backend/httpGet";
 
 import { initialState, reducer } from "./App.reducer";
 import {
@@ -36,28 +36,8 @@ import {
   getCountriesAndCities
 } from "./App.actions";
 import CreatePost from "./shared/components/PostEditor";
-import { INewPost, IFullDataUser, IPost, ISavedUser } from "./App.types";
+import { IFullDataUser, IPost, ISavedUser } from "./App.types";
 import { getStateFromStorage } from "./shared/storage/localStorage.actions";
-
-const nullUser: IFullDataUser = JSON.parse(
-  '{ "Country": "", ' +
-    '"City": "",' +
-    '"Birthday": "0000-00-00",' +
-    '"FirstName": "NoName",' +
-    '"LastName": "NoName",' +
-    '"Status": "Empty",' +
-    '"avatar": "null",' +
-    '"email": "NoName@nomail.com",' +
-    '"isBanned": false,' +
-    '"isValid": true,' +
-    '"regDate": "0000-00-00",' +
-    '"Birthday": "0000-00-00",' +
-    '"idUsers": 0,' +
-    '"phone": 123455677888,' +
-    '"rating": 0,' +
-    '"username": "NoName",' +
-    '"password": "NoPass" }'
-);
 
 const App = () => {
   const [
@@ -75,46 +55,41 @@ const App = () => {
     dispatch
   ] = useReducer(reducer, initialState);
 
-  const sendToServer = (
-    socket: SocketIOClient.Socket,
-    command: string,
-    data: Object
-  ) => {
-    httpPost(socket, command, data);
-  };
-
   const timeHandler = useRef<any>();
 
-  socket.on("Client Login Response", (res: any) => {
-    dispatch(isLoading(false));
-    dispatch(setProgress("Loading Your info..."));
-    clearTimeout(timeHandler.current);
+  socket.on(
+    "Client Login Response",
+    (res: socket.ISocketResponse<IFullDataUser>) => {
+      dispatch(isLoading(false));
+      dispatch(setProgress("Loading Your info..."));
+      clearTimeout(timeHandler.current);
 
-    try {
-      if (res.status === "Not Found") {
-        // alert("Authorization error. Please, log in");
-        dispatch(logIn(user));
-      } else if (res.status === "OK") {
-        timeHandler.current = setTimeout(() => {
-          // console.log(res.result)
-          dispatch(logIn(res.result));
-          setTimeout(() => {
-            dispatch(isLoading(true));
-          }, 1000);
-        }, 100);
-      } else {
-        // console.log(res)
-        dispatch(
-          setErrorMessage(
-            "Incorrect Server Answer. Please, contact with admin with this Error: \n" +
-              JSON.stringify(res)
-          )
-        );
+      try {
+        if (res.status === "Not Found") {
+          alert("Authorization error. Please, log in");
+          dispatch(logIn(user));
+        } else if (res.status === "OK") {
+          timeHandler.current = setTimeout(() => {
+            // console.log(res.data.response)
+            dispatch(logIn(res.data.response));
+            setTimeout(() => {
+              dispatch(isLoading(true));
+            }, 1000);
+          }, 100);
+        } else {
+          // console.log(res)
+          dispatch(
+            setErrorMessage(
+              "Incorrect Server Answer. Please, contact with admin with this Error: \n" +
+                JSON.stringify(res)
+            )
+          );
+        }
+      } catch (e) {
+        dispatch(setErrorMessage("Connection Error. Is server online?"));
       }
-    } catch (e) {
-      dispatch(setErrorMessage("Connection Error. Is server online?"));
     }
-  });
+  );
 
   socket.on("Get Countries Response", (res: any) => {
     dispatch(getCountriesAndCities(res.result));
@@ -128,8 +103,17 @@ const App = () => {
   // error => )
 
   const login = (bufLogin: string, bufPass: string) => {
-    const formData = { login: bufLogin, pass: bufPass, token };
-    sendToServer(socket, "Client Login Request", formData);
+    sendToSocket<api.models.ILoginRequest>(socket, {
+      data: {
+        options: {
+          login: bufLogin,
+          pass: bufPass
+        },
+        requestFor: "Client Login Request"
+      },
+      operation: "Client Login Request",
+      token
+    });
   };
   async function startProject() {
     await dispatch(isLoading(false));
@@ -137,7 +121,14 @@ const App = () => {
     const data: ISavedUser = await getStateFromStorage("savedUser");
     await login(data.username, data.password);
     await dispatch(setProgress("Update info about you..."));
-    sendToServer(socket, "Get countries", { operation: "Get contries" });
+    sendToSocket(socket, {
+      data: {
+        options: {},
+        requestFor: "Get contries request"
+      },
+      operation: "Get contries request",
+      token
+    });
     await dispatch(setProgress("Ready..."));
     await dispatch(isLoading(true));
   }
@@ -155,8 +146,8 @@ const App = () => {
     // }, 5*60*1000);
   }, [socket]);
   window.onbeforeunload = (e: Event) => {
-    const formData = "logout=" + encodeURIComponent(user.username);
-    sendToServer(socket, "login.php", formData);
+    // const formData = "logout=" + encodeURIComponent(user.username);
+    // sendToSocket(socket, "login.php", formData);
     dispatch(saveUserDataToCookie());
   };
 
@@ -172,8 +163,8 @@ const App = () => {
   const LogOut = () => {
     dispatch(isLoading(false));
     dispatch(setProgress("Log out..."));
-    const formData = "logout=" + encodeURIComponent(user.username);
-    sendToServer(socket, "login.php", formData);
+    // const formData = "logout=" + encodeURIComponent(user.username);
+    // sendToServer(socket, "login.php", formData);
     dispatch(logOut());
     dispatch(setProgress("Update info about you..."));
     dispatch(isLoading(true));
@@ -185,6 +176,7 @@ const App = () => {
         <BodyBlock
           mode="Main Page"
           socket={socket}
+          token={token}
           currentUser={user}
           onError={e => {
             dispatch(setErrorMessage(e));
@@ -249,7 +241,7 @@ const App = () => {
       if (postID === "new") {
         dispatch(setEditedPost("new"));
       } else {
-        await sendToServer(socket, "getPosts.php", postData);
+        // await sendToServer(socket, "getPosts.php", postData);
       }
       await dispatch(setProgress("Almost done..."));
       await dispatch(isLoading(true));
@@ -301,6 +293,7 @@ const App = () => {
       isLogin ? (
         <ProfileView
           socket={socket}
+          token={token}
           username={username}
           editable={username === user.username ? true : false}
           currentUser={user}

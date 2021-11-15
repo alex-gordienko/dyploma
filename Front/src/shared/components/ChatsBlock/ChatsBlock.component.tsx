@@ -10,7 +10,7 @@ import {
   IMember,
   ISearchedUser
 } from "../../../App.types";
-import { httpPost } from "../../../backend/httpGet";
+import { sendToSocket } from "../../../backend/httpGet";
 import Chats from "./ChatsFeed";
 import Modal from "../Modal";
 import ChatMessenger from "./ChatMessenger";
@@ -71,15 +71,6 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
   const [members, setMembers] = useState(nullMembers);
   const [isDisabled, setIsDisabled] = useState(false);
 
-  const sendToServer = (
-    socket: SocketIOClient.Socket,
-    command: string,
-    oldData: IMember[],
-    data: string
-  ) => {
-    httpPost(socket, command, data);
-  };
-
   socket.on("userSearcher.php", (res: any) => {
     if (res.operation === "Search Peoples") {
       if (res.result === "No Results Found") {
@@ -118,7 +109,8 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
       preloadedPeople +
       " " +
       "}}";
-    sendToServer(socket, "userSearcher.php", oldData, postData);
+    console.log("ChatsBlock.component.tsx -> Try to send data");
+    // sendToSocket(socket, "userSearcher.php", postData);
   };
 
   const saveChanges = (

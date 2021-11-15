@@ -1,11 +1,11 @@
 Arguments: 
-  /home/alexoid1999/.nvm/versions/node/v16.0.0/bin/node /usr/share/yarn/bin/yarn.js upgrade react
+  /home/alexoid1999/.nvm/versions/node/v16.0.0/bin/node /usr/share/yarn/bin/yarn.js
 
 PATH: 
   /home/alexoid1999/.nvm/versions/node/v16.0.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
 Yarn version: 
-  1.22.5
+  1.22.15
 
 Node version: 
   16.0.0
@@ -14,7 +14,7 @@ Platform:
   linux x64
 
 Trace: 
-  Error: EACCES: permission denied, mkdir '/srv/windows/dyploma/Front/node_modules/prop-types/node_modules/react-is'
+  Error: EACCES: permission denied, mkdir '/srv/windows/dyploma/Front/node_modules/debug/node_modules'
 
 npm manifest: 
   {
@@ -48,7 +48,7 @@ npm manifest:
       "react-scripts": "3.3.1",
       "react-slick": "^0.25.0",
       "slick-carousel": "^1.8.1",
-      "socket.io-client": "^2.3.0",
+      "socket.io-client": "^4.3.2",
       "typescript": "^3.7.5",
       "universal-cookie": "^4.0.3"
     },
@@ -1927,9 +1927,9 @@ Lockfile:
     integrity sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==
   
   "@types/prop-types@*":
-    version "15.7.3"
-    resolved "https://registry.yarnpkg.com/@types/prop-types/-/prop-types-15.7.3.tgz#2ab0d5da2e5815f94b0b9d4b95d1e5f243ab2ca7"
-    integrity sha512-KfRL3PuHmqQLOG+2tGpRO26Ctg+Cq1E01D2DMriKEATHgWLfeNDmq9e29Q9WIky0dQ3NPkd1mzYH8Lm936Z9qw==
+    version "15.7.4"
+    resolved "https://registry.yarnpkg.com/@types/prop-types/-/prop-types-15.7.4.tgz#fcf7205c25dff795ee79af1e30da2c9790808f11"
+    integrity sha512-rZ5drC/jWjrArrS8BR6SIr4cWpW09RNTYt9AMZo3Jwwif+iacXAqgVjm0B0Bv/S1jhDXKHqRVNCbACkJ89RAnQ==
   
   "@types/q@^1.5.1":
     version "1.5.2"
@@ -1975,13 +1975,27 @@ Lockfile:
     dependencies:
       "@types/react" "*"
   
-  "@types/react@*", "@types/react@^16.9.19":
+  "@types/react@*":
     version "16.9.19"
     resolved "https://registry.yarnpkg.com/@types/react/-/react-16.9.19.tgz#c842aa83ea490007d29938146ff2e4d9e4360c40"
     integrity sha512-LJV97//H+zqKWMms0kvxaKYJDG05U2TtQB3chRLF8MPNs+MQh/H1aGlyDUxjaHvu08EAGerdX2z4LTBc7ns77A==
     dependencies:
       "@types/prop-types" "*"
       csstype "^2.2.0"
+  
+  "@types/react@^16.9.19":
+    version "16.14.20"
+    resolved "https://registry.yarnpkg.com/@types/react/-/react-16.14.20.tgz#ff6e932ad71d92c27590e4a8667c7a53a7d0baad"
+    integrity sha512-SV7TaVc8e9E/5Xuv6TIyJ5VhQpZoVFJqX6IZgj5HZoFCtIDCArE3qXkcHlc6O/Ud4UwcMoX+tlvDA95YrKdLgA==
+    dependencies:
+      "@types/prop-types" "*"
+      "@types/scheduler" "*"
+      csstype "^3.0.2"
+  
+  "@types/scheduler@*":
+    version "0.16.2"
+    resolved "https://registry.yarnpkg.com/@types/scheduler/-/scheduler-0.16.2.tgz#1a62f89525723dde24ba1b01b092bf5df8ad4d39"
+    integrity sha512-hppQEBDmlwhFAXKJX2KnWLYu5yMfi91yazPb2l+lbJiwW+wdo1gNeRA+3RgNSO39WYX2euey41KEwnqesU2Jew==
   
   "@types/socket.io-client@^1.4.32":
     version "1.4.32"
@@ -4235,10 +4249,20 @@ Lockfile:
     dependencies:
       cssom "0.3.x"
   
-  csstype@^2.2.0, csstype@^2.5.7:
+  csstype@^2.2.0:
+    version "2.6.18"
+    resolved "https://registry.yarnpkg.com/csstype/-/csstype-2.6.18.tgz#980a8b53085f34af313410af064f2bd241784218"
+    integrity sha512-RSU6Hyeg14am3Ah4VZEmeX8H7kLwEEirXe6aU2IPfKNvhXwTflK5HQRDNI0ypQXoqmm+QPyG2IaPuQE5zMwSIQ==
+  
+  csstype@^2.5.7:
     version "2.6.8"
     resolved "https://registry.yarnpkg.com/csstype/-/csstype-2.6.8.tgz#0fb6fc2417ffd2816a418c9336da74d7f07db431"
     integrity sha512-msVS9qTuMT5zwAGCVm4mxfrZ18BNc6Csd0oJAtiFMZ1FAx1CCvy2+5MDmYoix63LM/6NDbNtodCiGYGmFgO0dA==
+  
+  csstype@^3.0.2:
+    version "3.0.9"
+    resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.0.9.tgz#6410af31b26bd0520933d02cbc64fce9ce3fbf0b"
+    integrity sha512-rpw6JPxK6Rfg1zLOYCSwle2GFOOsnjmDYDaBwEcwoOg4qlsIVCN789VkBZDJAGi4T07gI4YSutR43t9Zz4Lzuw==
   
   cycle@1.0.x:
     version "1.0.3"
@@ -10863,10 +10887,15 @@ Lockfile:
       scriptjs "^2.5.8"
       warning "^3.0.0"
   
-  react-is@^16.6.0, react-is@^16.7.0, react-is@^16.8.1, react-is@^16.8.4:
+  react-is@^16.6.0, react-is@^16.7.0, react-is@^16.8.4:
     version "16.12.0"
     resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.12.0.tgz#2cc0fe0fba742d97fd527c42a13bec4eeb06241c"
     integrity sha512-rPCkf/mWBtKc97aLL9/txD8DZdemK0vkA3JMLShjlJB3Pj3s+lpf1KaBzMfQrAmhMQB0n1cU/SUGgKKBCe837Q==
+  
+  react-is@^16.8.1:
+    version "16.13.1"
+    resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
+    integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
   
   react-native-cli@^2.0.1:
     version "2.0.1"
@@ -11059,9 +11088,9 @@ Lockfile:
       react-proxy "^1.1.7"
   
   react@^16.12.0:
-    version "16.12.0"
-    resolved "https://registry.yarnpkg.com/react/-/react-16.12.0.tgz#0c0a9c6a142429e3614834d5a778e18aa78a0b83"
-    integrity sha512-fglqy3k5E+81pA8s+7K0/T3DBCF0ZDOher1elBFzF7O6arXJgzyu/FW+COxFvAWXJoJN9KIZbT2LXlukwphYTA==
+    version "16.14.0"
+    resolved "https://registry.yarnpkg.com/react/-/react-16.14.0.tgz#94d776ddd0aaa37da3eda8fc5b6b18a4c9a3114d"
+    integrity sha512-0X2CImDkJGApiAlcf0ODKIneSwBPhqJawOa5wCtKbu7ZECrmS26NvtSILynQ66cgkT/RJ4LidJOc3bUESwmU8g==
     dependencies:
       loose-envify "^1.1.0"
       object-assign "^4.1.1"

@@ -1,13 +1,14 @@
-import fs from 'fs';
-import { Connection, MysqlError, Query } from 'mysql';
+import { Connection } from 'mysql2';
 import { Socket } from 'socket.io';
+import User from './userGetter';
+import { getBaseFromFile, parseData, toDataPost } from './utils';
 
 class PostGetter {
     protected dbConnector: Connection;
     protected socket: Socket;
     // Директория с папками фотографий
     protected readonly photoDirectory = `/srv/windows/dyploma/Photoes/`;
-    
+
     constructor(dbConnector: Connection, socket: Socket){
         this.dbConnector = dbConnector;
         this.socket = socket;
@@ -15,14 +16,14 @@ class PostGetter {
 
     public async getAllPosts(
         requestedOperation: string,
-        postIDs: string[],
+        postIDs: number[],
         pageSize = 4
-    ) {
+    ): Promise<data.IPost[]> {
         const con = this.dbConnector;
         const socket = this.socket;
 
         const getRawPostsQuery =
-            `SELECT 
+            `SELECT
                 Post.comment AS description,
                 Post.date,
                 Post.Name,
@@ -35,13 +36,13 @@ class PostGetter {
                 Users.idUsers AS 'idUser'
             FROM Post
             JOIN Users
-            WHERE Post.Users_idUsers = Users.idUsers 
+            WHERE Post.Users_idUsers = Users.idUsers
             LIMIT ${postIDs.length}, ${pageSize}`;
-        
+
         return new Promise((resolve, reject)=>{
-            //Запрос 1. Получение списка постов
-            con.query(getRawPostsQuery, 
-            async (err: MysqlError, postsData) => {
+            // Запрос 1. Получение списка постов
+            con.query(getRawPostsQuery,
+            async (err, postsData) => {
                 if(err) {
                     socket.emit(
                         'Get Posts Response', {
@@ -51,19 +52,10 @@ class PostGetter {
                         }
                     )
                 }
-                else{
-                    let JSONpost = JSON.parse(JSON.stringify(postsData));
-                    await JSONpost.forEach(async(post,id)=>{
-                        //Для каждого поста...
-                        //Перевод координат в отдельный объект и удаление старых параметров
-                        post.position = {lat:0,lng:0};
-                        post.rating = {likes:0, dislikes: 0, isLikedByMe:false, isDislikedByMe:false};
-                        post.photoes = [];
-                        post.position.lat = post.lat;
-                        post.position.lng = post.lng;
-                        delete post.lat; delete post.lng;
-                    })
-                    resolve(JSONpost)
+                else {
+                    const JSONpost = parseData(postsData) as data.IRawPostData[];
+                    const result: data.IPost[] = JSONpost.map(toDataPost);
+                    resolve(result)
                 }
             })
         })
@@ -72,14 +64,14 @@ class PostGetter {
     public async getUserPublicPosts(
         requestedOperation: string,
         username: string,
-        postIDs: string[],
+        postIDs: number[],
         pageSize = 4
-    ) {
-        let con = this.dbConnector;
-        let socket = this.socket;
+    ): Promise<data.IPost[]> {
+        const con = this.dbConnector;
+        const socket = this.socket;
 
         const getRawPostsQuery =
-            `SELECT 
+            `SELECT
                 Post.comment AS description,
                 Post.date,
                 Post.Name,
@@ -94,13 +86,13 @@ class PostGetter {
             JOIN Users
             WHERE Post.isPrivate=0
             AND Post.Users_idUsers=Users.idUsers
-            AND Users.username='${username}' 
+            AND Users.username='${username}'
             LIMIT ${postIDs.length}, ${pageSize}`;
-        
+
         return new Promise((resolve, reject)=>{
-            //Запрос 1. Получение списка постов
-            con.query(getRawPostsQuery, 
-                async (err: MysqlError, postsData) => {
+            // Запрос 1. Получение списка постов
+            con.query(getRawPostsQuery,
+                async (err, postsData) => {
                 if(err) {
                     socket.emit(
                         'Get Posts Response', {
@@ -110,24 +102,10 @@ class PostGetter {
                         }
                     )
                 }
-                else{
-                    let JSONpost = JSON.parse(JSON.stringify(postsData));
-                    await JSONpost.forEach(async(post,id)=>{
-                        //Для каждого поста...
-                        //Перевод координат в отдельный объект и удаление старых параметров
-                        post.position = {lat:0,lng:0};
-                        post.rating = {
-                            likes: 0,
-                            dislikes: 0,
-                            isLikedByMe: false,
-                            isDislikedByMe: false
-                        };
-                        post.photoes = [];
-                        post.position.lat = post.lat;
-                        post.position.lng = post.lng;
-                        delete post.lat; delete post.lng;
-                    })
-                    resolve(JSONpost)
+                else {
+                    const JSONpost = parseData(postsData) as data.IRawPostData[];
+                    const result: data.IPost[] = JSONpost.map(toDataPost)
+                    resolve(result)
                 }
             })
         })
@@ -136,14 +114,14 @@ class PostGetter {
     public async getUserPrivatePosts(
         requestedOperation: string,
         username: string,
-        postIDs: string[],
+        postIDs: number[],
         pageSize = 4
-    ) {
-        let con = this.dbConnector;
-        let socket = this.socket;
+    ): Promise<data.IPost[]> {
+        const con = this.dbConnector;
+        const socket = this.socket;
 
         const getRawPostsQuery =
-            `SELECT 
+            `SELECT
                 Post.comment AS description,
                 Post.date,
                 Post.Name,
@@ -155,16 +133,16 @@ class PostGetter {
                 Users.username,
                 Users.idUsers AS 'idUser'
             FROM Post
-            JOIN Users 
+            JOIN Users
             WHERE Post.isPrivate=1
             AND Post.Users_idUsers = Users.idUsers
-            AND Users.username='${username}' 
+            AND Users.username='${username}'
             LIMIT ${postIDs.length}, ${pageSize}`;
-        
+
         return new Promise((resolve, reject)=>{
-            //Запрос 1. Получение списка постов
-            con.query(getRawPostsQuery, 
-            async (err: MysqlError, postsData) => {
+            // Запрос 1. Получение списка постов
+            con.query(getRawPostsQuery,
+            async (err, postsData) => {
                 if(err) {
                     socket.emit(
                         'Get Posts Response', {
@@ -174,44 +152,30 @@ class PostGetter {
                         }
                     )
                 }
-                else{
-                    let JSONpost = JSON.parse(JSON.stringify(postsData));
-                    await JSONpost.forEach(async(post,id)=>{
-                        //Для каждого поста...
-                        //Перевод координат в отдельный объект и удаление старых параметров
-                        post.position = {lat:0,lng:0};
-                        post.rating = {
-                            likes: 0,
-                            dislikes: 0,
-                            isLikedByMe: false,
-                            isDislikedByMe: false
-                        };
-                        post.photoes = [];
-                        post.position.lat = post.lat;
-                        post.position.lng = post.lng;
-                        delete post.lat; delete post.lng;
-                    })
-                    resolve(JSONpost)
+                else {
+                    const JSONpost = parseData(postsData) as data.IRawPostData[];
+                    const result: data.IPost[] = JSONpost.map(toDataPost)
+                    resolve(result)
                 }
             })
         })
     }
 
     public async getLikes(
-        post,
-        user,
-    ) {
-        let con = this.dbConnector; 
+        post: data.IPost,
+        user: User,
+    ): Promise<data.IPost> {
+        const con = this.dbConnector;
         const getRawLikesQuery =
-            `SELECT userId 
+            `SELECT userId
             FROM Post_has_Rate
             JOIN Post
             WHERE Post.idPost = Post_has_Rate.postId
             AND Post_has_Rate.rating=1
             AND Post_has_Rate.postId='${post.idPost}'`
         return new Promise((resolve, reject) => {
-            //Запрос 2. Получаем лайки
-            con.query(getRawLikesQuery, 
+            // Запрос 2. Получаем лайки
+            con.query(getRawLikesQuery,
             async (err,likes) => {
                 if(err) {
                     reject({
@@ -221,14 +185,14 @@ class PostGetter {
                     });
                 }
                 else{
-                    
+
                     let isLikedByMe = false;
-                    let JSONlikes = JSON.parse(JSON.stringify(likes));
+                    const JSONlikes = parseData<{userId: number}[]>(likes);
 
                     if(JSONlikes.length>0){
-                        isLikedByMe = JSONlikes.find(like => like.userId === user.id)!==undefined? true:false;
-                        post.rating.likes=JSONlikes.length;
-                        post.rating.isLikedByMe=isLikedByMe;
+                        isLikedByMe = JSONlikes.find(like => like.userId === user.id) ? true : false;
+                        post.rating.likes = JSONlikes.length;
+                        post.rating.isLikedByMe = isLikedByMe;
                     }
                     else {
                         post.rating.likes = 0;
@@ -241,21 +205,21 @@ class PostGetter {
     }
 
     public async getDisLikes(
-        post,
-        user
-    ) {
-        let con = this.dbConnector;
+        post: data.IPost,
+        user: User
+    ): Promise<data.IPost> {
+        const con = this.dbConnector;
         const rawGetDislikesQuery =
-            `SELECT userId 
+            `SELECT userId
             FROM Post_has_Rate
             JOIN Post
             WHERE Post.idPost=Post_has_Rate.postId
             AND Post_has_Rate.rating=-1
             AND Post_has_Rate.postId='${post.idPost}'`;
-        
+
         return new Promise((resolve, reject)=>{
-            //Запрос 3. Получаем дизлайки
-            con.query(rawGetDislikesQuery, 
+            // Запрос 3. Получаем дизлайки
+            con.query(rawGetDislikesQuery,
             async (err,disLikes) => {
                 if(err) {
                     reject({
@@ -266,10 +230,10 @@ class PostGetter {
                 }
                 else{
                     let isDislikedByMe = false;
-                    let JSONdislikes = JSON.parse(JSON.stringify(disLikes));
+                    const JSONdislikes = parseData<{userId: number}[]>(disLikes);
 
-                    if(JSONdislikes.length>0){
-                        isDislikedByMe = JSONdislikes.find(like=> like.userId===user.id)!==undefined? true:false;
+                    if(JSONdislikes.length > 0) {
+                        isDislikedByMe = JSONdislikes.find(like => like.userId === user.id) ? true : false;
                         post.rating.dislikes=JSONdislikes.length;
                         post.rating.isDislikedByMe=isDislikedByMe;
                     }
@@ -283,27 +247,21 @@ class PostGetter {
         })
     }
 
-    public async getPhotoes (post) {
-        let con = this.dbConnector;
-        let directory = this.photoDirectory;
-
-        //Получаем base64 из файла
-        const getBaseFromFile = (file) => {
-            var bitmap = fs.readFileSync(file);
-            return Buffer.from(bitmap).toString('base64');
-        }
+    public async getPhotoes (post: data.IPost): Promise<data.IPost> {
+        const con = this.dbConnector;
+        const directory = this.photoDirectory;
 
         const rawGetPhotoesQuery =
             `SELECT fileName AS 'name'
             FROM Photoes
             JOIN Post
-            WHERE Post.idPost=Photoes.Post_idPost 
+            WHERE Post.idPost=Photoes.Post_idPost
             AND Post.idPost='${post.idPost}'`;
 
         return new Promise((resolve, reject) => {
-            //Запрос 4. Получаем названия фотографий для поста
-            con.query(rawGetPhotoesQuery, 
-            async (err, photoes) => {
+            // Запрос 4. Получаем названия фотографий для поста
+            con.query(rawGetPhotoesQuery,
+            (err, photoes) => {
                 if(err) {
                     reject({
                         operation: `Get Dislikes to post ${post.idPost}`,
@@ -311,63 +269,66 @@ class PostGetter {
                         result: err
                     })
                 }
-                else{                    
-                    let JSONphotoes = JSON.parse(JSON.stringify(photoes));
-                    await JSONphotoes.forEach((photo)=>{
-                        post.photoes.push({
-                            name: photo.name,
-                            blob: 'data:image/jpeg;base64,' + getBaseFromFile(directory+`${post.idPost}/`+photo.name)
-                        })
-                    })
+                else{
+                    const JSONphotoes = parseData<{name: string}[]>(photoes);
+                    const postPhotoes = JSONphotoes.map((photo) => ({
+                        name: photo.name,
+                        blob: 'data:image/jpeg;base64,' + getBaseFromFile(directory+`${post.idPost}/`+photo.name)
+                    }))
 
-                    //Отправка результата наверх
-                    resolve(post)
+                    resolve({
+                        ...post,
+                        photoes: postPhotoes
+                    })
                 }
             })
         })
     }
 
     public async getComments(
-        operation,
-        postID
-    ) {
-        let con = this.dbConnector;
+        postID: number
+    ): Promise<data.IPostComment[]> {
+        const con = this.dbConnector;
 
         const getRawCommentsQuery =
         `SELECT	Comments.Content AS 'content',
-            Users.avatar AS 'userAvatar', 
+            Users.avatar AS 'userAvatar',
             Users.username AS 'author',
-            Users.rating AS 'userRating', 
+            Users.rating AS 'userRating',
             Comments.date,
-            Comments.rating 
-        FROM Comments JOIN Users JOIN Post 
-        WHERE Comments.Post_idPost=Post.idPost 
-        AND Comments.Users_idUsers=Users.idUsers 
+            Comments.rating
+        FROM Comments JOIN Users JOIN Post
+        WHERE Comments.Post_idPost=Post.idPost
+        AND Comments.Users_idUsers=Users.idUsers
         AND Post.idPost='${postID}'`;
 
         return new Promise((resolve, reject)=>{
             con.query(getRawCommentsQuery,
             async (err, commentsArray) => {
                 if(err) {
-                    //Если ошибка подключения к бд
+                    // Если ошибка подключения к бд
                     reject({
-                        operation,
                         status: 'SQL Error',
                         result: err
                     });
                 }
                 else{
-                    //Если подключился и запрос что-то вернул
-                    let JSONcommentsArray = JSON.parse(JSON.stringify(commentsArray));
+                    // Если подключился и запрос что-то вернул
+                    const JSONcommentsArray = parseData<data.IPostComment[]>(commentsArray);
                     JSONcommentsArray.forEach((comment)=>{
-                        //Если у пользователя есть аватарка, переводим её в base64
-                        if(comment.userAvatar!==null) comment.userAvatar = Buffer.from(comment.userAvatar).toString();
+                        // Если у пользователя есть аватарка, переводим её в base64
+                        if (comment.userAvatar) {
+                            comment.userAvatar = Buffer.from(comment.userAvatar).toString();
+                        }
                     })
                     if(JSONcommentsArray){
-                        resolve({operation, status: 'OK', result: JSONcommentsArray});
+                        resolve(JSONcommentsArray);
                     }
                     else {
-                        resolve({operation, status: 'Not Found', result: 'Not Found'});
+                        reject({
+                        status: 'Not Found',
+                        result: err
+                    });
                     }
                 }
             })
@@ -377,19 +338,19 @@ class PostGetter {
     public async getIDPost(
         operation: string,
         postName: string,
-        date: Date,
+        date: string,
         idUser: number
-    ) {
+    ): Promise<string> {
         return new Promise((resolve, reject)=>{
-            this.dbConnector.query(`SELECT idPost FROM Post WHERE Name ='${postName}' 
-            AND date='${date}' 
-            AND Users_idUsers='${idUser}'`, async function(err,idPost){
+            this.dbConnector.query(`SELECT idPost FROM Post WHERE Name ='${postName}'
+            AND date='${date}'
+            AND Users_idUsers='${idUser}'`, async (err,idPost) => {
                     if(err) {
-                        //Если ошибка подключения к бд
+                        // Если ошибка подключения к бд
                         reject({operation, status: 'SQL Error', result: err});
                     }
                     else{
-                        resolve(JSON.parse(JSON.stringify(idPost))[0].idPost)
+                        resolve(parseData<{idPost: string}[]>(idPost)[0].idPost)
                     }
                 })
         })

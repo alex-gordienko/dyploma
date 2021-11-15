@@ -23,12 +23,11 @@ export function httpGet(url: string) {
   });
 }
 
-export function httpPost(
+export function sendToSocket<T>(
   socket: SocketIOClient.Socket,
-  command: string,
-  data: any
+  data: socket.ISocketRequest<T>
 ) {
-  console.log("Connecting to: " + command);
+  console.log("Connecting to: " + data.operation);
   console.log("Sending next: ", data);
-  return socket.emit(command, data);
+  return socket.emit(data.operation, data);
 }

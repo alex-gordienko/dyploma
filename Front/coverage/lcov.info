@@ -74,7 +74,7 @@ FN:7,httpGet
 FN:8,(anonymous_1)
 FN:12,(anonymous_2)
 FN:20,(anonymous_3)
-FN:27,httpPost
+FN:27,sendToSocket
 FN:28,(anonymous_5)
 FN:35,(anonymous_6)
 FNF:7
@@ -83,7 +83,7 @@ FNDA:2,httpGet
 FNDA:2,(anonymous_1)
 FNDA:2,(anonymous_2)
 FNDA:0,(anonymous_3)
-FNDA:2,httpPost
+FNDA:2,sendToSocket
 FNDA:2,(anonymous_5)
 FNDA:2,(anonymous_6)
 DA:2,1

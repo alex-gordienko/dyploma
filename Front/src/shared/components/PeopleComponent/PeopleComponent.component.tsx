@@ -11,7 +11,7 @@ import {
   ICountriesAndCities
 } from "../../../App.types";
 import { Redirect } from "react-router-dom";
-import { httpPost } from "../../../backend/httpGet";
+import { sendToSocket } from "../../../backend/httpGet";
 
 interface IPeopleComponentProps {
   socket: SocketIOClient.Socket;
@@ -37,10 +37,6 @@ const PeopleComponent = ({
   const [blocked, setBlocked] = useState(nullPeople);
   const [filters, setFilters] = useState(nullFilter);
   const [selectedTab, setSelectedTab] = useState(1);
-
-  const sendToServer = (command: string, data: string) => {
-    httpPost(socket, command, data);
-  };
 
   socket.on("Search Peoples Response", (res: any) => {
     if (res.result === "No Results Found") {
@@ -97,7 +93,8 @@ const PeopleComponent = ({
       preloadedPeople +
       " " +
       "}}";
-    sendToServer("userSearcher.php", postData);
+    console.log("PeopleComponent.component.tsx -> Try to send data");
+    // sendToSocket(socket, "userSearcher.php", postData);
   };
 
   const searchFriends = (
@@ -118,7 +115,8 @@ const PeopleComponent = ({
       preloadedPeople +
       " " +
       "}}";
-    sendToServer("userSearcher.php", postData);
+    console.log("PeopleComponent.component.tsx 118 -> Try to send data");
+    // sendToServer("userSearcher.php", postData);
   };
 
   const searchInvites = (
@@ -139,7 +137,8 @@ const PeopleComponent = ({
       preloadedPeople +
       " " +
       "}}";
-    sendToServer("userSearcher.php", postData);
+    console.log("PeopleComponent.component.tsx 140 -> Try to send data");
+    // sendToServer("userSearcher.php", postData);
   };
 
   const searchBlocked = (
@@ -160,7 +159,8 @@ const PeopleComponent = ({
       preloadedPeople +
       " " +
       "}}";
-    sendToServer("userSearcher.php", postData);
+    console.log("PeopleComponent.component.tsx 162 -> Try to send data");
+    //sendToServer("userSearcher.php", postData);
   };
 
   useEffect(() => {

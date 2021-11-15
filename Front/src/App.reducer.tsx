@@ -17,7 +17,7 @@ import {
   IPost
 } from "./App.types";
 
-import { httpPost, ServerAdress } from "../src/backend/httpGet";
+import { sendToSocket, ServerAdress } from "../src/backend/httpGet";
 import io from "socket.io-client";
 
 import {
@@ -32,22 +32,22 @@ import Photo3 from "./assets/img/Space3.jpg";
 import defaultAvatar from "./assets/img/DefaultPhoto.jpg";
 
 const defaultUser: IFullDataUser = {
-  Country: "",
-  City: "",
   Birthday: "",
+  City: "",
+  Country: "",
   FirstName: "",
   LastName: "",
   Status: "",
   avatar: defaultAvatar,
   email: "",
   idUsers: 0,
-  regDate: "",
   isBanned: false,
   isConfirm: true,
+  password: "",
   phone: 0,
   rating: 0,
-  username: "",
-  password: ""
+  regDate: "",
+  username: ""
 };
 
 export const nullPhoto: IPhotoBuffer[] = [
@@ -57,13 +57,13 @@ export const nullPhoto: IPhotoBuffer[] = [
 ];
 export const nullPost: IPost = {
   Name: "",
+  date: "",
+  description: "",
   idPost: 0,
   idUser: 0,
   isPrivate: 0,
-  description: "",
   photoes: nullPhoto,
   position: { lat: 0, lng: 0 },
-  date: "",
   rating: { likes: 0, dislikes: 0, isLikedByMe: false, isDislikedByMe: false },
   type: 0,
   username: ""
@@ -130,13 +130,10 @@ const initialState: IAppState = {
 };
 
 const reducer = (state: IAppState, action: IAppActions) => {
-  const sendData = (
+  const sendData = <T,>(
     socket: SocketIOClient.Socket,
-    command: string,
-    data: any
-  ) => {
-    httpPost(socket, command, data);
-  };
+    data: socket.ISocketRequest<T>
+  ) => {};
 
   state.socket.on("Post Editor Response", (res: any) => {
     if (res.operation === "create post") {
@@ -173,12 +170,16 @@ const reducer = (state: IAppState, action: IAppActions) => {
   switch (action.type) {
     case "EditUser": {
       // console.log("Edit Existing user", action.userData);
-      const postData =
-        '{ "operation": "Edit User"' +
-        ', "json": ' +
-        JSON.stringify(action.userData) +
-        "}";
-      sendData(state.socket, "userEditor.php", postData);
+      sendToSocket<IFullDataUser>(state.socket, {
+        data: {
+          options: {
+            ...action.userData
+          },
+          requestFor: "edit user"
+        },
+        operation: "User editor request",
+        token: state.token
+      });
       return {
         ...state,
         user: action.userData
@@ -189,22 +190,31 @@ const reducer = (state: IAppState, action: IAppActions) => {
       if (action.userData.avatar === defaultAvatar) {
         action.userData.avatar = "";
       }
-      const postData =
-        '{ "operation": "Create User"' +
-        ', "json": ' +
-        JSON.stringify(action.userData) +
-        "}";
-      sendData(state.socket, "userEditor.php", postData);
+      sendToSocket<IFullDataUser>(state.socket, {
+        data: {
+          options: {
+            ...action.userData
+          },
+          requestFor: "create user"
+        },
+        operation: "User editor request",
+        token: state.token
+      });
       return {
         ...state
       };
     }
     case "CreatePost": {
-      const postData = {
-        json: action.newPost,
-        operation: "create post"
-      };
-      sendData(state.socket, "Post Editor Request", postData);
+      sendToSocket<IPost>(state.socket, {
+        data: {
+          options: {
+            ...action.newPost
+          },
+          requestFor: "create post"
+        },
+        operation: "Post Editor Request",
+        token: state.token
+      });
       return {
         ...state
       };
@@ -214,15 +224,16 @@ const reducer = (state: IAppState, action: IAppActions) => {
       // console.log(action.editedPost);
       if (action.editedPost !== state.editedPost) {
         if (state.user.idUsers === action.editedPost.idUser) {
-          const postData =
-            '{ "operation": "edit post"' +
-            ', "json": {' +
-            ' "idUser": ' +
-            state.user.idUsers +
-            ', "data": ' +
-            JSON.stringify(action.editedPost) +
-            "}}";
-          sendData(state.socket, "createpost.php", postData);
+          sendToSocket<IPost>(state.socket, {
+            data: {
+              options: {
+                ...action.editedPost
+              },
+              requestFor: "edit post"
+            },
+            operation: "Post Editor Request",
+            token: state.token
+          });
         }
       } else {
         alert("There is no changes");

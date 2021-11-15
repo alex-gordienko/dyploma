@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "esModuleInterop": true,
+    "module": "CommonJS",
+    "strict": true,
+    "moduleResolution": "Node",
+    "declaration": true,
+    "allowUnreachableCode": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "typeRoots": [
+      "node_modules/@types",
+      "src/@types/api",
+      "src/@types/data"
+    ],
+    "rootDir": "./src",
+    "outDir": "./build",
+    "lib": [ "es2017", "DOM"]
+  },
+  "include": [
+    "src"
+  ]
+}

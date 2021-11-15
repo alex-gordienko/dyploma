@@ -356,7 +356,7 @@
   IUser
 } from './App.types';
 &nbsp;
-import {adress, httpGet, httpPost} from '../src/backend/httpGet';
+import {adress, httpGet, sendToSocket} from '../src/backend/httpGet';
 import { saveStateInStorage, getStateFromStorage, deleteStateFromStorage } from './shared/storage/localStorage.actions';
 import {Markers} from './shared/storage/GoogleMap.Markers';
 &nbsp;
@@ -402,7 +402,7 @@ export const loginFunction =(login:string, email:string, pass:string)=&gt;{
   const formData = 'login='+encodeURIComponent(login)
   +"&amp;email="+encodeURIComponent(email)
   +"&amp;pass="+encodeURIComponent(pass);
-  httpPost(adress+"login.php", formData)
+  sendToSocket(adress+"login.php", formData)
   .then((response: any) =&gt; {
       if(JSON.parse(response) ==="No Results Found."){
         console.log("No such user found");

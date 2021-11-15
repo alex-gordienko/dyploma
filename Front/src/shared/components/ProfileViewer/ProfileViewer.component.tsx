@@ -11,11 +11,12 @@ import { SubHeader } from "../EditorComponents/EditorComponents.styled";
 import { IFullDataUser, ISearchedUser, IPost } from "../../../App.types";
 import { Redirect, NavLink } from "react-router-dom";
 import BodyBlock from "../BodyBlock";
-import { httpPost } from "../../../backend/httpGet";
+import { sendToSocket } from "../../../backend/httpGet";
 import defaultAvatar from "../../../assets/img/DefaultPhoto.jpg";
 
 interface IProfileViewerProps {
   socket: SocketIOClient.Socket;
+  token: string;
   username: string | undefined;
   editable: boolean;
   currentUser: IFullDataUser;
@@ -24,6 +25,7 @@ interface IProfileViewerProps {
 
 const ProfileViewer = ({
   socket,
+  token,
   username,
   editable,
   currentUser,
@@ -59,10 +61,6 @@ const ProfileViewer = ({
   const [privatePosts, setPrivatePosts] = useState(nullPosts);
   const [feed, setFeed] = useState(nullPosts);
   const [selectedTab, setSelectedTab] = useState(1);
-
-  const sendToServer = (command: string, data: string) => {
-    httpPost(socket, command, data);
-  };
 
   socket.on("Search User Response", (res: any) => {
     if (res.result === "User not found. Try again") {
@@ -117,7 +115,8 @@ const ProfileViewer = ({
       username +
       '"' +
       "}}";
-    sendToServer("userSearcher.php", postData);
+    console.log("ProfileViewer.component.tsx 116 -> Try to send data");
+    // sendToSocket(socket, "userSearcher.php", postData);
   };
 
   const searchFriends = (username = currentUser.username) => {
@@ -132,7 +131,8 @@ const ProfileViewer = ({
       "," +
       '"page": 0 ' +
       "}}";
-    sendToServer("userSearcher.php", postData);
+    console.log("ProfileViewer.component.tsx 132 -> Try to send data");
+    // sendToServer("userSearcher.php", postData);
   };
 
   useEffect(() => {
@@ -209,6 +209,7 @@ const ProfileViewer = ({
           <BodyBlock
             mode="Profile"
             socket={socket}
+            token={token}
             isAnotherUser={username}
             isPrivatePosts={selectedTab === 1 ? false : true}
             currentUser={currentUser}

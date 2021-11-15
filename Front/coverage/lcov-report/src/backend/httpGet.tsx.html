@@ -164,7 +164,7 @@ export function httpGet(url: string) {
     });
   };
 &nbsp;
-  export function httpPost(url: string, data: any) {
+  export function sendToSocket(url: string, data: any) {
     return new Promise((resolve,reject)=&gt;{
       console.log("Connecting to: "+url);
       console.log("Sending next: "+ data);
