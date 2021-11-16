@@ -53,125 +53,110 @@ const BodyBlock = ({
     clearTimeout(timeHandler.current);
 
     //Проверяем, что это за операция к нам поступила в ответе
-    switch (res.data.requestFor) {
-      //Если это ответ на запрос о получении постов
-      case "get all posts": {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-        if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.data.response}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
-          );
-        }
-        //Если все хорошо
-        else if (res.data.response && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newGlobalPosts = Array.from(
-            new Set(globalPostsFeed.concat(res.data.response))
-          );
-          //С помощью таймера асинхронно обновляем массив постов
+    //Если это ответ на запрос о получении постов
+    if (res.data.requestFor === "get all posts") {
+      //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
+      if (res.status === "Server Error" || res.status === "SQL Error") {
+        console.error(`Rejected: ${res.data.response}`);
+        onError(
+          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+            res.data.response
+          )}`
+        );
+      }
+      //Если все хорошо
+      else if (res.data.response && res.status === "OK") {
+        //Поштучно получаем каждый пост и добавляем его в Сет
+        let newGlobalPosts = Array.from(
+          new Set(globalPostsFeed.concat(res.data.response))
+        );
+        //С помощью таймера асинхронно обновляем массив постов
+        timeHandler.current = setTimeout(() => {
           console.log(newGlobalPosts);
           setGlobalPostsFeed(newGlobalPosts);
-          setReadyToCallNextPage(true);
-        }
-        break;
+        }, 1);
+        setReadyToCallNextPage(true);
       }
+    }
 
-      case "get user public posts": {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-        if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.data.response}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
-          );
-        }
-        //Если все хорошо
-        else if (res.data.response && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newUserPublicPosts = Array.from(
-            new Set(userPublicPostFeed.concat(res.data.response))
-          );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newUserPublicPosts);
-            setPublicUserPostFeed(newUserPublicPosts);
-          }, 1);
-          setReadyToCallNextPage(true);
-        }
-        break;
+    if (res.data.requestFor === "get user public posts") {
+      //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
+      if (res.status === "Server Error" || res.status === "SQL Error") {
+        console.error(`Rejected: ${res.data.response}`);
+        onError(
+          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+            res.data.response
+          )}`
+        );
       }
+      //Если все хорошо
+      else if (res.data.response && res.status === "OK") {
+        //Поштучно получаем каждый пост и добавляем его в Сет
+        let newUserPublicPosts = Array.from(
+          new Set(userPublicPostFeed.concat(res.data.response))
+        );
+        //С помощью таймера асинхронно обновляем массив постов
+        timeHandler.current = setTimeout(() => {
+          console.log(newUserPublicPosts);
+          setPublicUserPostFeed(newUserPublicPosts);
+        }, 1);
+        setReadyToCallNextPage(true);
+      }
+    }
 
-      case "get user private posts": {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-        if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.data.response}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
-          );
-        }
-        //Если все хорошо
-        else if (res.data.response && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newUserPrivatePosts = Array.from(
-            new Set(userPrivatePostFeed.concat(res.data.response))
-          );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newUserPrivatePosts);
-            setPrivateUserPostFeed(newUserPrivatePosts);
-          }, 1);
-          setReadyToCallNextPage(true);
-        }
-        break;
+    if (res.data.requestFor === "get user private posts") {
+      //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
+      if (res.status === "Server Error" || res.status === "SQL Error") {
+        console.error(`Rejected: ${res.data.response}`);
+        onError(
+          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+            res.data.response
+          )}`
+        );
       }
+      //Если все хорошо
+      else if (res.data.response && res.status === "OK") {
+        //Поштучно получаем каждый пост и добавляем его в Сет
+        let newUserPrivatePosts = Array.from(
+          new Set(userPrivatePostFeed.concat(res.data.response))
+        );
+        //С помощью таймера асинхронно обновляем массив постов
+        timeHandler.current = setTimeout(() => {
+          console.log(newUserPrivatePosts);
+          setPrivateUserPostFeed(newUserPrivatePosts);
+        }, 1);
+        setReadyToCallNextPage(true);
+      }
+    }
 
-      //Если это ответ на запрос о получении комментариев к посту
-      case "get comments": {
-        if (isCommentData(res.data.response) && res.status === "OK") {
-          //Таймером устанавливаем список комментариев
-          timeHandler.current = setTimeout(() => {
-            console.log(res);
-            setComments((res.data.response as unknown) as IComment[]);
-          }, 1);
-        } else if (
-          res.status === "Server Error" ||
-          res.status === "SQL Error"
-        ) {
-          console.error(`Rejected: ${res.data.response}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
-          );
-        }
-        break;
-      }
-      //Если это ответ на запрос о создании комментария
-      case "create comment": {
-        if (res.status === "OK") {
+    //Если это ответ на запрос о получении комментариев к посту
+    if (res.data.requestFor === "get comments") {
+      if (isCommentData(res.data.response) && res.status === "OK") {
+        //Таймером устанавливаем список комментариев
+        timeHandler.current = setTimeout(() => {
           console.log(res);
-        } else if (
-          res.status === "Server Error" ||
-          res.status === "SQL Error"
-        ) {
-          console.error(`Rejected: ${res.data.response}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
-          );
-        }
-        break;
+          setComments((res.data.response as unknown) as IComment[]);
+        }, 1);
+      } else if (res.status === "Server Error" || res.status === "SQL Error") {
+        console.error(`Rejected: ${res.data.response}`);
+        onError(
+          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+            res.data.response
+          )}`
+        );
       }
-      default: {
-        console.error(`Unknown server response ${res.operation}`);
-        break;
+    }
+    //Если это ответ на запрос о создании комментария
+    if (res.data.requestFor === "create comment") {
+      if (res.status === "OK") {
+        console.log(res);
+      } else if (res.status === "Server Error" || res.status === "SQL Error") {
+        console.error(`Rejected: ${res.data.response}`);
+        onError(
+          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+            res.data.response
+          )}`
+        );
       }
     }
   });

@@ -1,4 +1,6 @@
 /Front/node_modules
+/Front/build
+/Front/coverage
 /Dump/
 /Photoes/
 /BodyBlock.test.ts
@@ -10,4 +12,5 @@
 /TensoFlow-Retrain-Models/ERA_NeuralBackup_31.05.2020.zip
 /TensoFlow-Retrain-Models/super/
 /NodeServer/node_modules/
+/NodeServer/build
 /.vscode/

@@ -21,8 +21,8 @@ export const toDataPost = (rawPost: data.IRawPostData): data.IPost => ({
     ...omit(rawPost, ['lat', 'lng']),
     photoes: [],
     position: {
-        lat: rawPost.lat,
-        lng: rawPost.lng
+        lat: Number(rawPost.lat),
+        lng: Number(rawPost.lng)
     },
     rating: {
         likes: 0,

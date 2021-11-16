@@ -2,8 +2,8 @@ declare namespace data {
     interface IPostTable {
         idPost: number;
         Name: string;
-        lat: number;
-        lng: number;
+        lat: string;
+        lng: string;
         comment: string;
         date: string;
         Users_idUsers: number;

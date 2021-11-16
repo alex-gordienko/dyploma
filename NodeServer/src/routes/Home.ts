@@ -14,18 +14,18 @@ const isConnectedToDb = (con: any): con is Connection =>
 const isCreateCommentData = (data: any): data is api.models.ICreateCommentAction =>
     data.content !== undefined
 
-const Home = (server: https.Server | http.Server)=>{
+const Home = (server: https.Server | http.Server) => {
     const io = new Server(server, {
         serveClient: false,
         allowEIO3: true,
         pingTimeout: 60000,
         cors: {
-            origin: 'http://10.15.0.96:3000',
+            origin: '*',
             credentials: true
         }
     });
 
-    io.on('connection', async (socket: Socket) => {
+    io.sockets.on('connection', async (socket: Socket) => {
         console.log('\n\x1b[0m New connection');
         // Для каждого сокета создаётся экземпляр коннектора БД, пользователя и парсера
         const con = await connectDB();
@@ -130,8 +130,6 @@ const Home = (server: https.Server | http.Server)=>{
                                     .then(compiledPosts => {
                                         // Отправляем
                                         console.log(`\t\x1b[32m Successful parsing, sending posts...`);
-                                        console.log('parsed posts', compiledPosts);
-                                        
                                         socket.emit<socket.AvailableResponseRoutes>(
                                             'Get Posts Response',
                                             {
@@ -294,7 +292,13 @@ const Home = (server: https.Server | http.Server)=>{
                             }
                             catch (e) {
                                 console.log(`\t\x1b[31m Get comments Error: \n\t${e}`);
-                                socket.emit('Get Posts Response', { operation: msg.operation, status: 'Server Error', result: e })
+                                socket.emit<socket.AvailableResponseRoutes>(
+                                    'Get Posts Response',
+                                    {
+                                        operation: msg.operation,
+                                        status: 'Server Error',
+                                        result: e
+                                    })
                             }
                             break;
                         }
@@ -302,14 +306,27 @@ const Home = (server: https.Server | http.Server)=>{
                         case 'create comment': {
                             if (isCreateCommentData(msg.data.options)) {
                                 try {
-                                    console.log(`\n\x1b[33m User ${user.name} is commenting post #${msg.data.options.postIDs[0]}`);
+                                    console.log(`\n\x1b[33m User ${user.name} is commenting post #${msg.data.options.idPost}`);
                                     postSetter.createComment(msg.operation, msg.data.options)
                                         .then(resolve => {
-                                            console.log(`\t\x1b[32m Comment to post #${msg.data.options.postIDs[0]} is created successful`);
-                                            socket.emit('Get Posts Response', resolve)
+                                            if (isCreateCommentData(msg.data.options))
+                                            console.log(`\t\x1b[32m Comment to post #${msg.data.options.idPost} is created successful`);
+                                            const response: socket.ISocketResponse<null> = {
+                                            operation: 'Get Posts Response',
+                                            status: resolve.status,
+                                            data: {
+                                                requestFor: msg.data.requestFor,
+                                                response: null
+                                            }
+                                        };
+                                            socket.emit<socket.AvailableResponseRoutes>(
+                                                'Get Posts Response',
+                                                response
+                                            );
                                         })
                                         .catch(reject => {
-                                            console.log(`\tComment to post #${msg.data.options.postIDs[0]} error!`);
+                                            if (isCreateCommentData(msg.data.options))
+                                            console.log(`\tComment to post #${msg.data.options.idPost} error!`);
                                             socket.emit<socket.AvailableResponseRoutes>(
                                                 'Get Posts Response',
                                                 reject
