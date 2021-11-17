@@ -3,6 +3,10 @@ declare namespace api.models {
         | 'get all posts'
         | 'get user public posts'
         | 'get user private posts'
+        | 'create post'
+        | 'edit post'
+        | 'get comments'
+        | 'create comment';
     
 
     interface IFilter {

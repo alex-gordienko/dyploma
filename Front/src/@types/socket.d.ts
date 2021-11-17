@@ -4,13 +4,17 @@ declare namespace socket {
     | "Get Posts Request"
     | "Post Editor Request"
     | "Get contries request"
-    | "User editor request";
+    | "User editor request"
+    | "User Searcher Request"
+    | "Comments Request";
 
   type AvailableResponseRoutes =
     | "Client Login Response"
     | "Get Posts Response"
     | "Post Editor Response"
-    | "User editor request";
+    | "User editor response"
+    | "User Searcher Response"
+    | "Comments Response";
 
   type ResponseStatus =
     | "OK"
@@ -19,27 +23,30 @@ declare namespace socket {
     | "Unknown operation"
     | "Not Found";
 
-  interface ISocketRequest<T> {
+  interface ISocketRequest<T, K> {
     operation: AvailableRequestRoutes;
     token: string;
     data: {
-      requestFor: string;
+      requestFor: K;
       options: T;
     };
   }
 
-  interface ISocketResponse<T> {
+  interface ISocketResponse<T, K> {
     operation: AvailableResponseRoutes;
     status: ResponseStatus;
     data: {
-      requestFor: string;
+      requestFor: K;
       response: T;
     };
   }
 
-  interface ISocketErrorResponse {
+  interface ISocketErrorResponse<T> {
     operation: string;
     status: ResponseStatus;
-    result: string;
+    data: {
+      requestFor: T;
+      response: string;
+    };
   }
 }

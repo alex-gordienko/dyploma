@@ -104,19 +104,22 @@ const ProfileViewer = ({
   //error => onError("Error connection to the server")
 
   const searchProfile = (username = currentUser.username) => {
-    //console.log("Searching: ", username);
-    const postData =
-      '{ "operation": "Search User"' +
-      ', "json": {' +
-      '"currentUser": "' +
-      currentUser.username +
-      '",' +
-      '"searchedUser": "' +
-      username +
-      '"' +
-      "}}";
-    console.log("ProfileViewer.component.tsx 116 -> Try to send data");
-    // sendToSocket(socket, "userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search User",
+        options: {
+          currentUser: currentUser.username,
+          searchedUser: username,
+          filters: nullFilter,
+          page: 0
+        }
+      },
+      token
+    });
   };
 
   const searchFriends = (username = currentUser.username) => {

@@ -23,9 +23,9 @@ export function httpGet(url: string) {
   });
 }
 
-export function sendToSocket<T>(
+export function sendToSocket<T, K>(
   socket: SocketIOClient.Socket,
-  data: socket.ISocketRequest<T>
+  data: socket.ISocketRequest<T, K>
 ) {
   console.log("Connecting to: " + data.operation);
   console.log("Sending next: ", data);

@@ -58,14 +58,14 @@ const Home = (server: https.Server | http.Server) => {
             // ChatRoute(socket, con);
 
             // Обработчик запросов для авторизации
-            socket.on('Client Login Request',
-                async (msg: socket.ISocketRequest<api.models.ILoginRequest>) => {
+            socket.on<socket.AvailableRequestRoutes>('Client Login Request',
+                async (msg: socket.ISocketRequest<api.models.ILoginRequest, api.models.IAvailableUserActions>) => {
                     if (msg.data.options.login && msg.data.options.login !== '') {
                         console.log(`\x1b[33m Client ${msg.data.options.login} is connecting...`);
                         socket.join(msg.token);
                         try {
                             user.Login(msg.data.options)
-                                .then((result: socket.ISocketResponse<api.models.IUser>) => {
+                                .then((result: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>) => {
                                     console.log(`\t\x1b[32m Client ${msg.data.options.login} with token ${msg.token} is connected succesfully`);
                                     socket.emit<socket.AvailableResponseRoutes>(
                                         'Client Login Response',
@@ -101,8 +101,8 @@ const Home = (server: https.Server | http.Server) => {
                 });
 
             // Обработчик запросов для работы с постами
-            socket.on('Get Posts Request',
-                async (msg: socket.ISocketRequest<api.models.IGetPostsRequest>) => {
+            socket.on<socket.AvailableRequestRoutes>('Get Posts Request',
+                async (msg: socket.ISocketRequest<api.models.IGetPostsRequest, api.models.IAvailablePostActions>) => {
                     switch (msg.data.requestFor) {
                         // Получить 4 поста, начиная с n-го (пагинация) и отправить
                         case 'get all posts': {
@@ -269,6 +269,23 @@ const Home = (server: https.Server | http.Server) => {
                             break;
                         }
 
+                        // Если пришла неизвестная операция
+                        default: {
+                            console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`)
+                            socket.emit<socket.AvailableResponseRoutes>(
+                                'Get Posts Response',
+                                {
+                                    operation: msg.operation,
+                                    status: 'Unknown operation'
+                                })
+                        }
+                    }
+
+                });
+
+            socket.on<socket.AvailableRequestRoutes>('Comments Request',
+                async (msg: socket.ISocketRequest<api.models.IGetPostsRequest, api.models.IAvailablePostActions>) => {
+                    switch (msg.data.requestFor) {
                         // Получить комментарии и отправить
                         case 'get comments': {
                             try {
@@ -276,7 +293,7 @@ const Home = (server: https.Server | http.Server) => {
                                 postGetter.getComments(msg.data.options.postIDs[0])
                                     .then((resolve) => {
                                         console.log(`\t\x1b[32m Sending comments to post #${msg.data.options.postIDs[0]}...`);
-                                        const response: socket.ISocketResponse<data.IPostComment[]> = {
+                                        const response: socket.ISocketResponse<data.IPostComment[], api.models.IAvailablePostActions> = {
                                             operation: 'Post Editor Response',
                                             status: 'OK',
                                             data: {
@@ -285,7 +302,7 @@ const Home = (server: https.Server | http.Server) => {
                                             }
                                         };
                                         socket.emit<socket.AvailableResponseRoutes>(
-                                            'Get Posts Response',
+                                            'Comments Response',
                                             response
                                         )
                                     })
@@ -293,7 +310,7 @@ const Home = (server: https.Server | http.Server) => {
                             catch (e) {
                                 console.log(`\t\x1b[31m Get comments Error: \n\t${e}`);
                                 socket.emit<socket.AvailableResponseRoutes>(
-                                    'Get Posts Response',
+                                    'Comments Response',
                                     {
                                         operation: msg.operation,
                                         status: 'Server Error',
@@ -310,25 +327,25 @@ const Home = (server: https.Server | http.Server) => {
                                     postSetter.createComment(msg.operation, msg.data.options)
                                         .then(resolve => {
                                             if (isCreateCommentData(msg.data.options))
-                                            console.log(`\t\x1b[32m Comment to post #${msg.data.options.idPost} is created successful`);
-                                            const response: socket.ISocketResponse<null> = {
-                                            operation: 'Get Posts Response',
-                                            status: resolve.status,
-                                            data: {
-                                                requestFor: msg.data.requestFor,
-                                                response: null
-                                            }
-                                        };
+                                                console.log(`\t\x1b[32m Comment to post #${msg.data.options.idPost} is created successful`);
+                                            const response: socket.ISocketResponse<null, api.models.IAvailablePostActions> = {
+                                                operation: 'Comments Response',
+                                                status: resolve.status,
+                                                data: {
+                                                    requestFor: msg.data.requestFor,
+                                                    response: null
+                                                }
+                                            };
                                             socket.emit<socket.AvailableResponseRoutes>(
-                                                'Get Posts Response',
+                                                'Comments Response',
                                                 response
                                             );
                                         })
                                         .catch(reject => {
                                             if (isCreateCommentData(msg.data.options))
-                                            console.log(`\tComment to post #${msg.data.options.idPost} error!`);
+                                                console.log(`\tComment to post #${msg.data.options.idPost} error!`);
                                             socket.emit<socket.AvailableResponseRoutes>(
-                                                'Get Posts Response',
+                                                'Comments Response',
                                                 reject
                                             )
                                         })
@@ -336,7 +353,7 @@ const Home = (server: https.Server | http.Server) => {
                                 catch (e) {
                                     console.log(`\t\x1b[31m Create post Error: \n\t${e}`);
                                     socket.emit<socket.AvailableResponseRoutes>(
-                                        'Get Posts Response',
+                                        'Comments Response',
                                         {
                                             operation: msg.operation,
                                             status: 'Server Error',
@@ -346,79 +363,127 @@ const Home = (server: https.Server | http.Server) => {
                             }
                             break;
                         }
-
-                        // Если пришла неизвестная операция
                         default: {
                             console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`)
                             socket.emit<socket.AvailableResponseRoutes>(
-                                'Get Posts Response',
+                                'Comments Response',
                                 {
                                     operation: msg.operation,
                                     status: 'Unknown operation'
                                 })
                         }
                     }
+                });
 
-                })
-
-            socket.on('Post Editor Request',
-                async (msg: socket.ISocketRequest<api.models.IPost>
+            socket.on<socket.AvailableRequestRoutes>('Post Editor Request',
+                async (msg: socket.ISocketRequest<api.models.IPost, api.models.IAvailablePostActions>
                 ) => {
-                switch (msg.data.requestFor) {
-                    case 'create post': {
-                        console.log(`\n\x1b[33m User ${user.name} is trying to create new post...`);
-                        postSetter.createPost(msg.operation, msg.data.options)
-                            .then(() => {
-                                console.log(`\t\x1b[32m Successful create post. Gettin ID post...`);
-                                return postGetter
-                                    .getIDPost(
-                                        msg.operation,
-                                        msg.data.options.Name,
-                                        msg.data.options.date,
-                                        msg.data.options.idUser
+                    switch (msg.data.requestFor) {
+                        case 'create post': {
+                            console.log(`\n\x1b[33m User ${user.name} is trying to create new post...`);
+                            postSetter.createPost(msg.operation, msg.data.options)
+                                .then(() => {
+                                    console.log(`\t\x1b[32m Successful create post. Gettin ID post...`);
+                                    return postGetter
+                                        .getIDPost(
+                                            msg.operation,
+                                            msg.data.options.Name,
+                                            msg.data.options.date,
+                                            msg.data.options.idUser
+                                        )
+                                })
+                                .then(idPost => {
+                                    console.log(`\t\x1b[32m Post ID is #${idPost}. \n Setting new photoes...`);
+                                    return postSetter
+                                        .settingPhotoes(
+                                            msg.operation,
+                                            idPost,
+                                            msg.data.options
+                                        )
+                                })
+                                .then(resolve => {
+                                    console.log(`\t\x1b[32m Success saved photoes on disk and DB...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'Post Editor Response',
+                                        resolve
                                     )
-                            })
-                            .then(idPost => {
-                                console.log(`\t\x1b[32m Post ID is #${idPost}. \n Setting new photoes...`);
-                                return postSetter
-                                    .settingPhotoes(
-                                        msg.operation,
-                                        idPost,
-                                        msg.data.options
+                                })
+                                .catch(reject => {
+                                    console.log(`\t\x1b[31m Error when saving: ${reject}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'Post Editor Response',
+                                        reject
                                     )
-                            })
-                            .then(resolve => {
-                                console.log(`\t\x1b[32m Success saved photoes on disk and DB...`);
-                                socket.emit<socket.AvailableResponseRoutes>(
-                                    'Post Editor Response',
-                                    resolve
-                                )
-                            })
-                            .catch(reject => {
-                                console.log(`\t\x1b[31m Error when saving: ${reject}...`);
-                                socket.emit<socket.AvailableResponseRoutes>(
-                                    'Post Editor Response',
-                                    reject
-                                )
-                            })
-                        break;
-                    }
-                    case 'edit post': {
+                                })
+                            break;
+                        }
+                        case 'edit post': {
 
-                        break;
+                            break;
+                        }
+                        // Если пришла неизвестная операция
+                        default: {
+                            console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`)
+                            socket.emit<socket.AvailableResponseRoutes>(
+                                'Post Editor Response',
+                                {
+                                    operation: msg.operation,
+                                    status: 'Unknown operation'
+                                })
+                        }
                     }
-                    // Если пришла неизвестная операция
-                    default: {
-                        console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`)
-                        socket.emit<socket.AvailableResponseRoutes>(
-                            'Post Editor Response',
-                            {
-                                operation: msg.operation,
-                                status: 'Unknown operation'
-                            })
+                });
+
+            socket.on<socket.AvailableRequestRoutes>('User Searcher Request',
+                async (msg: socket.ISocketRequest<api.models.ISearchUserRequest, api.models.IAvailableUserActions>
+                ) => {
+                    switch (msg.data.requestFor) {
+                        case 'Search Peoples': {
+                            console.log(`\n\x1b[33m User ${user.name} is trying to search users...`);
+                            user.searchPeople(msg.data.options)
+                                .then(result => {
+                                    console.log(`\t\x1b[32m Found ${result.data.response.length} results...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        result
+                                    )
+                                })
+                                .catch(rejected => {
+                                    console.log(`\t\x1b[31m Error when search: ${rejected.data.response}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        rejected
+                                    )
+                                })
+                            break;
+                        }
+                        case 'Search User': {
+                            console.log('Search User');
+                            break;
+                        }
+                        case 'Search Friends': {
+                            console.log('Search Friends');
+                            break;
+                        }
+                        case 'Search Invites': {
+                            console.log('Search Invites');
+                            break;
+                        }
+                        case 'Search Blocked': {
+                            console.log('Search Blocked');
+                            break;
+                        }
+                        default: {
+                            console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`);
+                            socket.emit<socket.AvailableResponseRoutes>(
+                                'User Searcher Response',
+                                {
+                                    operation: msg.operation,
+                                    status: 'Unknown operation'
+                                })
+                        }
                     }
-                }
-            })
+                })
 
             socket.on('disconnect', () => {
                 console.log(`\t\x1b[36m User ${user.name} has been disconnected...`)

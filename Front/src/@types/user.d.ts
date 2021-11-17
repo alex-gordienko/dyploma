@@ -1,7 +1,25 @@
 declare namespace api.models {
+  type IAvailableUserActions =
+    | "Client Login Request"
+    | "Client Login Response"
+    | "Create User"
+    | "Edit User"
+    | "Search User"
+    | "Search Peoples"
+    | "Search Friends"
+    | "Search Invites"
+    | "Search Blocked";
+
   interface ILoginRequest {
     login: string;
     pass: string;
+  }
+
+  interface ISearchUserRequest {
+    currentUser: string;
+    searchedUser: string;
+    filters: api.models.IFilter;
+    page: number;
   }
   interface IUser {
     Country: string;

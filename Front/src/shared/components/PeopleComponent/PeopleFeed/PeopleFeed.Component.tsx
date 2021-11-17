@@ -12,6 +12,7 @@ interface IFeedProps {
   data: ISearchedUser[];
   currentUser: IFullDataUser;
   onSelect: (value: string) => void;
+  onReadyToCallNextPage: boolean;
   onCallNextPage: () => void;
 }
 
@@ -19,12 +20,13 @@ const PeopleFeed = ({
   data,
   currentUser,
   onSelect,
+  onReadyToCallNextPage,
   onCallNextPage
 }: IFeedProps) => {
   const lastPostElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (lastPostElement.current) {
+    if (onReadyToCallNextPage && lastPostElement.current) {
       var observer = new IntersectionObserver(entries => {
         if (entries[0].isIntersecting) {
           console.log("Visible");
@@ -36,7 +38,7 @@ const PeopleFeed = ({
         observer.disconnect();
       };
     }
-  }, [data.length]);
+  }, [data.length, onReadyToCallNextPage]);
 
   const loadMore = () => {
     onCallNextPage();

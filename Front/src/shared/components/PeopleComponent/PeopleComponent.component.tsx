@@ -15,6 +15,7 @@ import { sendToSocket } from "../../../backend/httpGet";
 
 interface IPeopleComponentProps {
   socket: SocketIOClient.Socket;
+  token: string;
   currentUser: IFullDataUser;
   userNameToSearchFriends?: string;
   contries: { id: number; name_en: string }[];
@@ -23,6 +24,7 @@ interface IPeopleComponentProps {
 }
 const PeopleComponent = ({
   socket,
+  token,
   currentUser,
   contries,
   cities,
@@ -37,24 +39,47 @@ const PeopleComponent = ({
   const [blocked, setBlocked] = useState(nullPeople);
   const [filters, setFilters] = useState(nullFilter);
   const [selectedTab, setSelectedTab] = useState(1);
+  const [onReadyToCallNextPage, setReadyToCallNextPage] = useState(false);
 
-  socket.on("Search Peoples Response", (res: any) => {
-    if (res.result === "No Results Found") {
-      if (searchedPeoples.length < 1) setSearchedPeoples([]);
-    } else {
-      let newFeed = searchedPeoples.concat(res.result);
-      setSearchedPeoples(newFeed);
-    }
-  });
+  const timeHandler = useRef<any>();
 
-  socket.on("Search Friends Response", (res: any) => {
-    if (res.result === "Friends not found") {
-      if (friends.length < 1) setFriends([]);
-    } else {
-      let newFeed = friends.concat(res.result);
-      setFriends(newFeed);
+  socket.on(
+    "User Searcher Response",
+    (
+      res: socket.ISocketResponse<
+        ISearchedUser[],
+        api.models.IAvailableUserActions
+      >
+    ) => {
+      clearTimeout(timeHandler.current);
+
+      if (res.data.requestFor === "Search Peoples") {
+        if (res.status === "Not Found") {
+          if (searchedPeoples.length < 1) setSearchedPeoples([]);
+        }
+        if (res.status === "SQL Error") {
+          onError((res.data.response as unknown) as string);
+        }
+        if (res.status === "OK") {
+          timeHandler.current = setTimeout(() => {
+            let newFeed = searchedPeoples.concat(res.data.response);
+            console.log(newFeed);
+            setSearchedPeoples(newFeed);
+            setReadyToCallNextPage(true);
+          }, 1);
+        }
+      }
     }
-  });
+  );
+
+  // socket.on("User Searcher Response", (res: any) => {
+  //   if (res.result === "No Results Found") {
+  //     if (searchedPeoples.length < 1) setSearchedPeoples([]);
+  //   } else {
+  //     let newFeed = searchedPeoples.concat(res.result);
+  //     setSearchedPeoples(newFeed);
+  //   }
+  // });
 
   socket.on("Search Invites Response", (res: any) => {
     if (res.result === "Invites not found") {
@@ -80,21 +105,23 @@ const PeopleComponent = ({
     filter = filters,
     preloadedPeople = searchedPeoples.length
   ) => {
-    let postData =
-      '{ "operation": "Search Peoples", ' +
-      '"json": {' +
-      '"username": "' +
-      currentUser.username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    console.log("PeopleComponent.component.tsx -> Try to send data");
-    // sendToSocket(socket, "userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Peoples",
+        options: {
+          currentUser: currentUser.username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
+    setReadyToCallNextPage(false);
   };
 
   const searchFriends = (
@@ -102,21 +129,22 @@ const PeopleComponent = ({
     filter = filters,
     preloadedPeople = friends.length
   ) => {
-    let postData =
-      '{ "operation": "Search Friends", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    console.log("PeopleComponent.component.tsx 118 -> Try to send data");
-    // sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Friends",
+        options: {
+          currentUser: username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
   };
 
   const searchInvites = (
@@ -124,21 +152,22 @@ const PeopleComponent = ({
     filter = filters,
     preloadedPeople = invites.length
   ) => {
-    let postData =
-      '{ "operation": "Search Invites", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    console.log("PeopleComponent.component.tsx 140 -> Try to send data");
-    // sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Invites",
+        options: {
+          currentUser: username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
   };
 
   const searchBlocked = (
@@ -146,21 +175,22 @@ const PeopleComponent = ({
     filter = filters,
     preloadedPeople = blocked.length
   ) => {
-    let postData =
-      '{ "operation": "Search Blocked", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    console.log("PeopleComponent.component.tsx 162 -> Try to send data");
-    //sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Blocked",
+        options: {
+          currentUser: username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
   };
 
   useEffect(() => {
@@ -284,6 +314,7 @@ const PeopleComponent = ({
               : []
           }
           onSelect={onSelect}
+          onReadyToCallNextPage={onReadyToCallNextPage}
           onCallNextPage={onCallNextPage}
         />
         <Filters

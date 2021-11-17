@@ -130,11 +130,6 @@ const initialState: IAppState = {
 };
 
 const reducer = (state: IAppState, action: IAppActions) => {
-  const sendData = <T,>(
-    socket: SocketIOClient.Socket,
-    data: socket.ISocketRequest<T>
-  ) => {};
-
   state.socket.on("Post Editor Response", (res: any) => {
     if (res.operation === "create post") {
       if (res.status === "OK") {
@@ -170,16 +165,19 @@ const reducer = (state: IAppState, action: IAppActions) => {
   switch (action.type) {
     case "EditUser": {
       // console.log("Edit Existing user", action.userData);
-      sendToSocket<IFullDataUser>(state.socket, {
-        data: {
-          options: {
-            ...action.userData
+      sendToSocket<IFullDataUser, api.models.IAvailableUserActions>(
+        state.socket,
+        {
+          data: {
+            options: {
+              ...action.userData
+            },
+            requestFor: "Edit User"
           },
-          requestFor: "edit user"
-        },
-        operation: "User editor request",
-        token: state.token
-      });
+          operation: "User editor request",
+          token: state.token
+        }
+      );
       return {
         ...state,
         user: action.userData
@@ -190,22 +188,25 @@ const reducer = (state: IAppState, action: IAppActions) => {
       if (action.userData.avatar === defaultAvatar) {
         action.userData.avatar = "";
       }
-      sendToSocket<IFullDataUser>(state.socket, {
-        data: {
-          options: {
-            ...action.userData
+      sendToSocket<IFullDataUser, api.models.IAvailableUserActions>(
+        state.socket,
+        {
+          data: {
+            options: {
+              ...action.userData
+            },
+            requestFor: "Create User"
           },
-          requestFor: "create user"
-        },
-        operation: "User editor request",
-        token: state.token
-      });
+          operation: "User editor request",
+          token: state.token
+        }
+      );
       return {
         ...state
       };
     }
     case "CreatePost": {
-      sendToSocket<IPost>(state.socket, {
+      sendToSocket<IPost, api.models.IAvailablePostActions>(state.socket, {
         data: {
           options: {
             ...action.newPost
@@ -224,7 +225,7 @@ const reducer = (state: IAppState, action: IAppActions) => {
       // console.log(action.editedPost);
       if (action.editedPost !== state.editedPost) {
         if (state.user.idUsers === action.editedPost.idUser) {
-          sendToSocket<IPost>(state.socket, {
+          sendToSocket<IPost, api.models.IAvailablePostActions>(state.socket, {
             data: {
               options: {
                 ...action.editedPost

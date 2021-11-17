@@ -59,7 +59,12 @@ const App = () => {
 
   socket.on(
     "Client Login Response",
-    (res: socket.ISocketResponse<IFullDataUser>) => {
+    (
+      res: socket.ISocketResponse<
+        IFullDataUser,
+        api.models.IAvailableUserActions
+      >
+    ) => {
       dispatch(isLoading(false));
       dispatch(setProgress("Loading Your info..."));
       clearTimeout(timeHandler.current);
@@ -103,17 +108,20 @@ const App = () => {
   // error => )
 
   const login = (bufLogin: string, bufPass: string) => {
-    sendToSocket<api.models.ILoginRequest>(socket, {
-      data: {
-        options: {
-          login: bufLogin,
-          pass: bufPass
+    sendToSocket<api.models.ILoginRequest, api.models.IAvailableUserActions>(
+      socket,
+      {
+        data: {
+          options: {
+            login: bufLogin,
+            pass: bufPass
+          },
+          requestFor: "Client Login Request"
         },
-        requestFor: "Client Login Request"
-      },
-      operation: "Client Login Request",
-      token
-    });
+        operation: "Client Login Request",
+        token
+      }
+    );
   };
   async function startProject() {
     await dispatch(isLoading(false));
@@ -196,6 +204,7 @@ const App = () => {
       isLogin ? (
         <PeopleComponent
           socket={socket}
+          token={token}
           currentUser={user}
           userNameToSearchFriends={username}
           contries={country_city.country}

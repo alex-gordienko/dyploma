@@ -11,7 +11,8 @@ declare class User {
     set name(name: string);
     get token(): string;
     set token(t: string);
-    Login(user: api.models.ILoginRequest): Promise<socket.ISocketResponse<api.models.IUser>>;
+    Login(user: api.models.ILoginRequest): Promise<socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>>;
+    searchPeople(request: api.models.ISearchUserRequest): Promise<socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>>;
 }
 export default User;
 //# sourceMappingURL=userGetter.d.ts.map

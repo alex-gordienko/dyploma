@@ -16,7 +16,7 @@ class PostSetter {
     public async createPost(
         operation: string,
         post: data.IPost
-    ): Promise<socket.ISocketErrorResponse>  {
+    ): Promise<socket.ISocketErrorResponse<api.models.IAvailablePostActions>>  {
         const con = this.dbConnector;
 
         const createPostQuery =
@@ -41,10 +41,24 @@ class PostSetter {
         async (err, postsData) => {
             if(err) {
                 // Если ошибка подключения к бд
-                reject({operation, status: 'SQL Error', result: err});
+                reject({
+                    operation,
+                    status: 'SQL Error',
+                     data: {
+                        requestFor: 'create post',
+                        response: err.message
+                    }
+                });
             }
             else{
-                resolve({operation, status: 'OK', result: 'Success'});
+                resolve({
+                    operation,
+                    status: 'OK',
+                    data: {
+                        requestFor: 'create post',
+                        response: 'Success'
+                    }
+                });
             }
         })
         })
@@ -54,7 +68,7 @@ class PostSetter {
         operation: string,
         postID: string,
         post: data.IPost
-    ): Promise<socket.ISocketErrorResponse> {
+    ): Promise<socket.ISocketErrorResponse<api.models.IAvailablePostActions>> {
         const con = this.dbConnector;
         const directory = this.photoDirectory+`/${postID}/`;
         return new Promise((resolve,reject)=>{
@@ -73,10 +87,24 @@ class PostSetter {
                 async (err,postsData) => {
                     if(err) {
                         // Если ошибка подключения к бд
-                        reject({operation, status: 'SQL Error', result: err});
+                        reject({
+                            operation,
+                            status: 'SQL Error',
+                            data: {
+                                requestFor: 'edit post',
+                                response: err.message
+                            }
+                        });
                     }
                     else{
-                        resolve({operation, status: 'OK', result: 'Success'});
+                        resolve({
+                            operation,
+                            status: 'OK',
+                            data: {
+                                requestFor: 'edit post',
+                                response: 'Success updated Photoes'
+                            }
+                        });
                     }
                 })
             });
@@ -87,7 +115,7 @@ class PostSetter {
     public async createComment(
         operation: string,
         data: api.models.ICreateCommentAction
-    ): Promise<socket.ISocketErrorResponse> {
+    ): Promise<socket.ISocketErrorResponse<api.models.IAvailablePostActions>> {
         const con = this.dbConnector;
 
         const createCommentQuery =
@@ -101,17 +129,31 @@ class PostSetter {
                 ${data.idUser})`;
 
         return new Promise((
-            resolve: (value: socket.ISocketErrorResponse) => void,
-            reject: (reason: socket.ISocketErrorResponse) => void
+            resolve: (value: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
         ) => {
             con.query(createCommentQuery,
             async (err, result) => {
                     if(err) {
                         // Если ошибка подключения к бд
-                        reject({operation, status: 'SQL Error', result: err.message});
+                        reject({
+                            operation,
+                            status: 'SQL Error',
+                            data: {
+                                response: err.message,
+                                requestFor: 'create comment'
+                            }
+                        });
                     }
                     else{
-                        resolve({operation, status: 'OK', result: 'Success'});
+                        resolve({
+                            operation,
+                            status: 'OK',
+                            data: {
+                                requestFor: 'create comment',
+                                response: 'Success'
+                            }
+                        });
                     }
                 })
         })

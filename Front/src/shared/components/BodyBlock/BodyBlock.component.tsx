@@ -31,7 +31,7 @@ const BodyBlock = ({
   isPrivatePosts,
   onError
 }: IBodyBlockProps) => {
-  var nullFilter = { username: "", country: "", city: "", date: new Date() };
+  var nullFilter = { username: "", country: "", city: "", date: "" };
   const [globalPostsFeed, setGlobalPostsFeed] = useState<IPost[]>([]);
   const [userPublicPostFeed, setPublicUserPostFeed] = useState<IPost[]>([]);
   const [userPrivatePostFeed, setPrivateUserPostFeed] = useState<IPost[]>([]);
@@ -47,119 +47,137 @@ const BodyBlock = ({
   const bodyBlockRef = useRef<HTMLDivElement>(null);
 
   //Обработчик для работы с постами
-  socket.on("Get Posts Response", (res: socket.ISocketResponse<IPost[]>) => {
-    //При каждом срабатывании EventListener...
-    //Обнуляем таймер
-    clearTimeout(timeHandler.current);
+  socket.on(
+    "Get Posts Response",
+    (
+      res: socket.ISocketResponse<IPost[], api.models.IAvailablePostActions>
+    ) => {
+      //При каждом срабатывании EventListener...
+      //Обнуляем таймер
+      clearTimeout(timeHandler.current);
 
-    //Проверяем, что это за операция к нам поступила в ответе
-    //Если это ответ на запрос о получении постов
-    if (res.data.requestFor === "get all posts") {
-      //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-      if (res.status === "Server Error" || res.status === "SQL Error") {
-        console.error(`Rejected: ${res.data.response}`);
-        onError(
-          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-            res.data.response
-          )}`
-        );
+      //Проверяем, что это за операция к нам поступила в ответе
+      //Если это ответ на запрос о получении постов
+      if (res.data.requestFor === "get all posts") {
+        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
+        if (res.status === "Server Error" || res.status === "SQL Error") {
+          console.error(`Rejected: ${res.data.response}`);
+          onError(
+            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+              res.data.response
+            )}`
+          );
+        }
+        //Если все хорошо
+        else if (res.data.response && res.status === "OK") {
+          //Поштучно получаем каждый пост и добавляем его в Сет
+          let newGlobalPosts = Array.from(
+            new Set(globalPostsFeed.concat(res.data.response))
+          );
+          //С помощью таймера асинхронно обновляем массив постов
+          timeHandler.current = setTimeout(() => {
+            console.log(newGlobalPosts);
+            setGlobalPostsFeed(newGlobalPosts);
+          }, 1);
+          setReadyToCallNextPage(true);
+        }
       }
-      //Если все хорошо
-      else if (res.data.response && res.status === "OK") {
-        //Поштучно получаем каждый пост и добавляем его в Сет
-        let newGlobalPosts = Array.from(
-          new Set(globalPostsFeed.concat(res.data.response))
-        );
-        //С помощью таймера асинхронно обновляем массив постов
-        timeHandler.current = setTimeout(() => {
-          console.log(newGlobalPosts);
-          setGlobalPostsFeed(newGlobalPosts);
-        }, 1);
-        setReadyToCallNextPage(true);
+
+      if (res.data.requestFor === "get user public posts") {
+        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
+        if (res.status === "Server Error" || res.status === "SQL Error") {
+          console.error(`Rejected: ${res.data.response}`);
+          onError(
+            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+              res.data.response
+            )}`
+          );
+        }
+        //Если все хорошо
+        else if (res.data.response && res.status === "OK") {
+          //Поштучно получаем каждый пост и добавляем его в Сет
+          let newUserPublicPosts = Array.from(
+            new Set(userPublicPostFeed.concat(res.data.response))
+          );
+          //С помощью таймера асинхронно обновляем массив постов
+          timeHandler.current = setTimeout(() => {
+            console.log(newUserPublicPosts);
+            setPublicUserPostFeed(newUserPublicPosts);
+          }, 1);
+          setReadyToCallNextPage(true);
+        }
+      }
+
+      if (res.data.requestFor === "get user private posts") {
+        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
+        if (res.status === "Server Error" || res.status === "SQL Error") {
+          console.error(`Rejected: ${res.data.response}`);
+          onError(
+            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+              res.data.response
+            )}`
+          );
+        }
+        //Если все хорошо
+        else if (res.data.response && res.status === "OK") {
+          //Поштучно получаем каждый пост и добавляем его в Сет
+          let newUserPrivatePosts = Array.from(
+            new Set(userPrivatePostFeed.concat(res.data.response))
+          );
+          //С помощью таймера асинхронно обновляем массив постов
+          timeHandler.current = setTimeout(() => {
+            console.log(newUserPrivatePosts);
+            setPrivateUserPostFeed(newUserPrivatePosts);
+          }, 1);
+          setReadyToCallNextPage(true);
+        }
       }
     }
+  );
 
-    if (res.data.requestFor === "get user public posts") {
-      //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-      if (res.status === "Server Error" || res.status === "SQL Error") {
-        console.error(`Rejected: ${res.data.response}`);
-        onError(
-          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-            res.data.response
-          )}`
-        );
+  socket.on(
+    "Comments Response",
+    (
+      res: socket.ISocketResponse<IComment[], api.models.IAvailablePostActions>
+    ) => {
+      //Если это ответ на запрос о получении комментариев к посту
+      if (res.data.requestFor === "get comments") {
+        if (res.status === "OK") {
+          //Таймером устанавливаем список комментариев
+          timeHandler.current = setTimeout(() => {
+            console.log(res);
+            setComments((res.data.response as unknown) as IComment[]);
+          }, 1);
+        } else if (
+          res.status === "Server Error" ||
+          res.status === "SQL Error"
+        ) {
+          console.error(`Rejected: ${res.data.response}`);
+          onError(
+            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+              res.data.response
+            )}`
+          );
+        }
       }
-      //Если все хорошо
-      else if (res.data.response && res.status === "OK") {
-        //Поштучно получаем каждый пост и добавляем его в Сет
-        let newUserPublicPosts = Array.from(
-          new Set(userPublicPostFeed.concat(res.data.response))
-        );
-        //С помощью таймера асинхронно обновляем массив постов
-        timeHandler.current = setTimeout(() => {
-          console.log(newUserPublicPosts);
-          setPublicUserPostFeed(newUserPublicPosts);
-        }, 1);
-        setReadyToCallNextPage(true);
-      }
-    }
-
-    if (res.data.requestFor === "get user private posts") {
-      //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-      if (res.status === "Server Error" || res.status === "SQL Error") {
-        console.error(`Rejected: ${res.data.response}`);
-        onError(
-          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-            res.data.response
-          )}`
-        );
-      }
-      //Если все хорошо
-      else if (res.data.response && res.status === "OK") {
-        //Поштучно получаем каждый пост и добавляем его в Сет
-        let newUserPrivatePosts = Array.from(
-          new Set(userPrivatePostFeed.concat(res.data.response))
-        );
-        //С помощью таймера асинхронно обновляем массив постов
-        timeHandler.current = setTimeout(() => {
-          console.log(newUserPrivatePosts);
-          setPrivateUserPostFeed(newUserPrivatePosts);
-        }, 1);
-        setReadyToCallNextPage(true);
-      }
-    }
-
-    //Если это ответ на запрос о получении комментариев к посту
-    if (res.data.requestFor === "get comments") {
-      if (isCommentData(res.data.response) && res.status === "OK") {
-        //Таймером устанавливаем список комментариев
-        timeHandler.current = setTimeout(() => {
+      //Если это ответ на запрос о создании комментария
+      if (res.data.requestFor === "create comment") {
+        if (res.status === "OK") {
           console.log(res);
-          setComments((res.data.response as unknown) as IComment[]);
-        }, 1);
-      } else if (res.status === "Server Error" || res.status === "SQL Error") {
-        console.error(`Rejected: ${res.data.response}`);
-        onError(
-          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-            res.data.response
-          )}`
-        );
+        } else if (
+          res.status === "Server Error" ||
+          res.status === "SQL Error"
+        ) {
+          console.error(`Rejected: ${res.data.response}`);
+          onError(
+            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+              res.data.response
+            )}`
+          );
+        }
       }
     }
-    //Если это ответ на запрос о создании комментария
-    if (res.data.requestFor === "create comment") {
-      if (res.status === "OK") {
-        console.log(res);
-      } else if (res.status === "Server Error" || res.status === "SQL Error") {
-        console.error(`Rejected: ${res.data.response}`);
-        onError(
-          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-            res.data.response
-          )}`
-        );
-      }
-    }
-  });
+  );
 
   socket.on("Get User Public Posts Response", (res: any) => {
     if (res.result === "No Results Found.") {
@@ -200,28 +218,34 @@ const BodyBlock = ({
     postIDs = Array.from(globalPostsFeed, post => post.idPost)
   ) => {
     let postType = isPrivatePosts
-      ? "get user private posts"
-      : "get user public posts";
+      ? ("get user private posts" as "get user private posts")
+      : ("get user public posts" as "get user public posts");
 
-    sendToSocket<api.models.IGetPostsRequest>(socket, {
-      data: {
-        options: {
-          username: isAnotherUser || currentUser.username,
-          currentUser: currentUser.idUsers,
-          filters: nullFilter,
-          postIDs: postIDs
+    sendToSocket<api.models.IGetPostsRequest, api.models.IAvailablePostActions>(
+      socket,
+      {
+        data: {
+          options: {
+            username: isAnotherUser || currentUser.username,
+            currentUser: currentUser.idUsers,
+            filters: nullFilter,
+            postIDs: postIDs
+          },
+          requestFor: isAnotherUser ? postType : "get all posts"
         },
-        requestFor: isAnotherUser ? postType : "get all posts"
-      },
-      operation: "Get Posts Request",
-      token
-    });
+        operation: "Get Posts Request",
+        token
+      }
+    );
     setReadyToCallNextPage(false);
   };
 
   const loadComments = (postID: number) => {
     if (postID !== 0) {
-      sendToSocket<api.models.IGetPostsRequest>(socket, {
+      sendToSocket<
+        api.models.IGetPostsRequest,
+        api.models.IAvailablePostActions
+      >(socket, {
         data: {
           options: {
             username: isAnotherUser || currentUser.username,
@@ -231,7 +255,7 @@ const BodyBlock = ({
           },
           requestFor: "get comments"
         },
-        operation: "Get Posts Request",
+        operation: "Comments Request",
         token
       });
     }
@@ -267,7 +291,10 @@ const BodyBlock = ({
     console.log("Creating new comment: ", newComment);
     setComments(prevState => [...prevState, newComment]);
 
-    sendToSocket<api.models.ICreateCommentAction>(socket, {
+    sendToSocket<
+      api.models.ICreateCommentAction,
+      api.models.IAvailablePostActions
+    >(socket, {
       data: {
         options: {
           idUser: currentUser.idUsers,
@@ -278,7 +305,7 @@ const BodyBlock = ({
         },
         requestFor: "create comment"
       },
-      operation: "Get Posts Request",
+      operation: "Comments Request",
       token
     });
   };
