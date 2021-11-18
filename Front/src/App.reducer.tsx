@@ -130,15 +130,30 @@ const initialState: IAppState = {
 };
 
 const reducer = (state: IAppState, action: IAppActions) => {
-  state.socket.on("Post Editor Response", (res: any) => {
-    if (res.operation === "create post") {
-      if (res.status === "OK") {
-        alert("Successful! Please, wait until your post will accept");
-      } else {
-        state.errorMessage = res.result;
+  state.socket.on(
+    "Post Editor Response",
+    (
+      res: socket.ISocketResponse<
+        IPost | string,
+        api.models.IAvailablePostActions
+      >
+    ) => {
+      state.progressMessage = "Almost done...";
+      if (res.data.requestFor === "get one post") {
+        if (res.status === "OK") {
+          state.editedPost = res.data.response as IPost;
+          state.isReady = true;
+        }
+      }
+      if (res.data.requestFor === "create post") {
+        if (res.status === "OK") {
+          alert("Successful! Please, wait until your post will accept");
+        } else {
+          state.errorMessage = res.data.response as string;
+        }
       }
     }
-  });
+  );
 
   state.socket.on("Edit User", (res: any) => {
     if (res.operation === "Edit User") {

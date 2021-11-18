@@ -11,7 +11,7 @@ import { connectDB } from '..';
 const isConnectedToDb = (con: any): con is Connection =>
     con.config !== undefined;
 
-const isCreateCommentData = (data: any): data is api.models.ICreateCommentAction =>
+const isCreateCommentData = (data: any): data is api.models.ICreateCommentRequest =>
     data.content !== undefined
 
 const Home = (server: https.Server | http.Server) => {
@@ -376,29 +376,87 @@ const Home = (server: https.Server | http.Server) => {
                 });
 
             socket.on<socket.AvailableRequestRoutes>('Post Editor Request',
-                async (msg: socket.ISocketRequest<api.models.IPost, api.models.IAvailablePostActions>
+                async (msg: socket.ISocketRequest<
+                    api.models.IPost | api.models.IGetPostToEditRequest,
+                    api.models.IAvailablePostActions
+                >
                 ) => {
                     switch (msg.data.requestFor) {
+                        case 'get one post': {
+                            const typedMessage = msg as socket.ISocketRequest<
+                                api.models.IGetPostToEditRequest,
+                                api.models.IAvailablePostActions>
+                            try {
+                                console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get post to edit`);
+                                // Получаем посты
+                                postGetter.getOnePost(msg.operation, typedMessage.data.options.postID, Number(user.id))
+                                    .then(postPattern => {
+                                        // Затем для каждого получаем лайки
+                                        console.log(`\t\t\x1b[33m Gettin likes to posts ${postPattern.idPost}`)
+                                        return postGetter.getLikes(postPattern, user)
+                                    })
+                                    .then(postWithLikes => {
+                                        // Затем для каждого получаем дизлайки
+                                        console.log(`\t\t\x1b[33m Gettin dislikes to posts ${postWithLikes.idPost}`)
+                                        return postGetter.getDisLikes(postWithLikes, user)
+                                    })
+                                    .then(postWithFullRating => {
+                                        // Затем для каждого получаем фотографии
+                                        console.log(`\t\t\x1b[33m Gettin photoes to posts ${postWithFullRating.idPost}`)
+                                        return postGetter.getPhotoes(postWithFullRating)
+                                    })
+                                    .then(compiledPost => {
+                                        // Отправляем
+                                        console.log(`\t\x1b[32m Successful parsing, sending posts...`);
+                                        socket.emit<socket.AvailableResponseRoutes>(
+                                            'Post Editor Response',
+                                            {
+                                                operation: typedMessage.operation,
+                                                status: 'OK',
+                                                data: {
+                                                    requestFor: typedMessage.data.requestFor,
+                                                    response: compiledPost
+                                                }
+                                            })
+                                    })
+                            } catch (e) {
+                                console.log(`\t\x1b[31m Parsing post Error: \n\t${e}`);
+                                socket.emit<socket.AvailableResponseRoutes>(
+                                    'Post Editor Response',
+                                    {
+                                        operation: msg.operation,
+                                        status: 'Server Error',
+                                        data: {
+                                            requestFor: msg.data.requestFor,
+                                            response: e
+                                        }
+                                    })
+                            }
+                            break;
+                        }
                         case 'create post': {
+                            const typedMessage = msg as socket.ISocketRequest<
+                                api.models.IPost,
+                                api.models.IAvailablePostActions>
                             console.log(`\n\x1b[33m User ${user.name} is trying to create new post...`);
-                            postSetter.createPost(msg.operation, msg.data.options)
+                            postSetter.createPost(typedMessage.operation, typedMessage.data.options)
                                 .then(() => {
                                     console.log(`\t\x1b[32m Successful create post. Gettin ID post...`);
                                     return postGetter
                                         .getIDPost(
-                                            msg.operation,
-                                            msg.data.options.Name,
-                                            msg.data.options.date,
-                                            msg.data.options.idUser
+                                            typedMessage.operation,
+                                            typedMessage.data.options.Name,
+                                            typedMessage.data.options.date,
+                                            typedMessage.data.options.idUser
                                         )
                                 })
                                 .then(idPost => {
                                     console.log(`\t\x1b[32m Post ID is #${idPost}. \n Setting new photoes...`);
                                     return postSetter
                                         .settingPhotoes(
-                                            msg.operation,
+                                            typedMessage.operation,
                                             idPost,
-                                            msg.data.options
+                                            typedMessage.data.options
                                         )
                                 })
                                 .then(resolve => {

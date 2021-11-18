@@ -25,6 +25,7 @@ interface IEditPostProps {
 
 interface ICreatePostProps {
   type: "Create";
+  loadData: () => void;
   currentUser: IFullDataUser;
   createNewPost: (newPost: IPost) => void;
 }
@@ -44,8 +45,7 @@ const PostEditor = (mode: IPostEditorProps) => {
   const [isDisabled, setIsDisabled] = useState(true);
 
   useEffect(() => {
-    if (mode.type === "Edit" && newPost === null) {
-      //console.log("postData is null. Calling function");
+    if (newPost === null) {
       mode.loadData();
     }
   }, [1]);

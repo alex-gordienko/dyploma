@@ -3,6 +3,7 @@ declare namespace api.models {
         | 'get all posts'
         | 'get user public posts'
         | 'get user private posts'
+        | "get one post"
         | 'create post'
         | 'edit post'
         | 'get comments'
@@ -16,6 +17,10 @@ declare namespace api.models {
         date: string;
     }
 
+    interface IGetPostToEditRequest {
+        postID: number;
+    }
+
     interface IGetPostsRequest {
         username: string;
         currentUser: number;
@@ -23,7 +28,7 @@ declare namespace api.models {
         postIDs: number[]
     }
 
-    interface ICreateCommentAction {
+    interface ICreateCommentRequest {
         content: string;
         rating: string;
         date: string;

@@ -241,19 +241,25 @@ const App = () => {
 
   const PostEditor = () => {
     const { postID } = useParams<{ postID: string }>();
-    const loadData = async () => {
-      // console.log(postID);
-      await dispatch(isLoading(false));
-      await dispatch(setProgress("Gettin info about post..."));
-      const postData =
-        '{ "operation": "get one post", "postID": ' + postID + " }";
+
+    const loadData = () => {
       if (postID === "new") {
         dispatch(setEditedPost("new"));
+        dispatch(isLoading(false));
+        dispatch(setProgress("Gettin info about post..."));
       } else {
-        // await sendToServer(socket, "getPosts.php", postData);
+        sendToSocket<
+          api.models.IGetPostToEditRequest,
+          api.models.IAvailablePostActions
+        >(socket, {
+          data: {
+            options: { postID: Number(postID) },
+            requestFor: "get one post"
+          },
+          operation: "Post Editor Request",
+          token
+        });
       }
-      await dispatch(setProgress("Almost done..."));
-      await dispatch(isLoading(true));
     };
 
     async function createNewPost(newPost: IPost) {
@@ -275,6 +281,7 @@ const App = () => {
         editedPost.idUser === 0 ? (
           <CreatePost
             type="Create"
+            loadData={loadData}
             currentUser={user}
             createNewPost={createNewPost}
           />

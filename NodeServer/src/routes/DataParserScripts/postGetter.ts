@@ -14,6 +14,58 @@ class PostGetter {
         this.socket = socket;
     }
 
+    public async getOnePost(
+        requestedOperation: string,
+        postID: number,
+        userId: number
+    ): Promise<data.IPost> {
+        const con = this.dbConnector;
+        const socket = this.socket;
+
+        const getRawPostsQuery =
+            `SELECT
+                Post.comment AS description,
+                Post.date,
+                Post.Name,
+                Post.idPost,
+                Post.lat,
+                Post.lng,
+                Post.type,
+                Post.isPrivate,
+                Users.username,
+                Users.idUsers AS 'idUser'
+            FROM Post
+            JOIN Users
+            WHERE Post.Users_idUsers = Users.idUsers
+            AND Post.idPost=${postID}`;
+
+        return new Promise((
+            resolve: (value: data.IPost) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
+            con.query(getRawPostsQuery,
+            async (err, postsData) => {
+                if(err) {
+                    reject({
+                        operation: requestedOperation,
+                        status: 'SQL Error',
+                        data: {
+                            requestFor: 'get one post',
+                            response: err.message
+                        }
+                    })
+                }
+                else {
+                    const JSONpost = parseData(postsData) as data.IRawPostData;
+                    if (JSONpost.idUser !== userId) {
+
+                    }
+                    resolve(toDataPost(JSONpost))
+                }
+            })
+        })
+    }
+
     public async getAllPosts(
         requestedOperation: string,
         postIDs: number[],
@@ -39,18 +91,22 @@ class PostGetter {
             WHERE Post.Users_idUsers = Users.idUsers
             LIMIT ${postIDs.length}, ${pageSize}`;
 
-        return new Promise((resolve, reject)=>{
+        return new Promise((
+            resolve: (value: data.IPost[]) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
             // Запрос 1. Получение списка постов
             con.query(getRawPostsQuery,
             async (err, postsData) => {
                 if(err) {
-                    socket.emit(
-                        'Get Posts Response', {
-                            operation: requestedOperation,
-                            status: 'SQL Error',
-                            result: err
+                    reject({
+                        operation: requestedOperation,
+                        status: 'SQL Error',
+                        data: {
+                            requestFor: 'get all posts',
+                            response: err.message
                         }
-                    )
+                    })
                 }
                 else {
                     const JSONpost = parseData(postsData) as data.IRawPostData[];
@@ -89,18 +145,22 @@ class PostGetter {
             AND Users.username='${username}'
             LIMIT ${postIDs.length}, ${pageSize}`;
 
-        return new Promise((resolve, reject)=>{
+        return new Promise((
+            resolve: (value: data.IPost[]) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
             // Запрос 1. Получение списка постов
             con.query(getRawPostsQuery,
                 async (err, postsData) => {
                 if(err) {
-                    socket.emit(
-                        'Get Posts Response', {
-                            operation: requestedOperation,
-                            status: 'SQL Error',
-                            result: err
+                    reject({
+                        operation: requestedOperation,
+                        status: 'SQL Error',
+                        data: {
+                            requestFor: 'get user public posts',
+                            response: err.message
                         }
-                    )
+                    });
                 }
                 else {
                     const JSONpost = parseData(postsData) as data.IRawPostData[];
@@ -139,18 +199,22 @@ class PostGetter {
             AND Users.username='${username}'
             LIMIT ${postIDs.length}, ${pageSize}`;
 
-        return new Promise((resolve, reject)=>{
+        return new Promise((
+            resolve: (value: data.IPost[]) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
             // Запрос 1. Получение списка постов
             con.query(getRawPostsQuery,
             async (err, postsData) => {
                 if(err) {
-                    socket.emit(
-                        'Get Posts Response', {
-                            operation: requestedOperation,
-                            status: 'SQL Error',
-                            result: err
+                    reject({
+                        operation: requestedOperation,
+                        status: 'SQL Error',
+                        data: {
+                            requestFor: 'get user private posts',
+                            response: err.message
                         }
-                    )
+                    })
                 }
                 else {
                     const JSONpost = parseData(postsData) as data.IRawPostData[];
@@ -173,7 +237,10 @@ class PostGetter {
             WHERE Post.idPost = Post_has_Rate.postId
             AND Post_has_Rate.rating=1
             AND Post_has_Rate.postId='${post.idPost}'`
-        return new Promise((resolve, reject) => {
+        return new Promise((
+            resolve: (value: data.IPost) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
             // Запрос 2. Получаем лайки
             con.query(getRawLikesQuery,
             async (err,likes) => {
@@ -181,7 +248,10 @@ class PostGetter {
                     reject({
                         operation: `Get Likes to post ${post.idPost}`,
                         status: 'SQL Error',
-                        result: err
+                        data: {
+                            requestFor: 'get one post',
+                            response: err.message
+                        }
                     });
                 }
                 else{
@@ -217,7 +287,10 @@ class PostGetter {
             AND Post_has_Rate.rating=-1
             AND Post_has_Rate.postId='${post.idPost}'`;
 
-        return new Promise((resolve, reject)=>{
+        return new Promise((
+            resolve: (value: data.IPost) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
             // Запрос 3. Получаем дизлайки
             con.query(rawGetDislikesQuery,
             async (err,disLikes) => {
@@ -225,7 +298,10 @@ class PostGetter {
                     reject({
                         operation: `Get Dislikes to post ${post.idPost}`,
                         status: 'SQL Error',
-                        result: err
+                        data: {
+                            requestFor: 'get one post',
+                            response: err.message
+                        }
                     })
                 }
                 else{
@@ -258,7 +334,10 @@ class PostGetter {
             WHERE Post.idPost=Photoes.Post_idPost
             AND Post.idPost='${post.idPost}'`;
 
-        return new Promise((resolve, reject) => {
+        return new Promise(
+            (resolve: (value: data.IPost) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
             // Запрос 4. Получаем названия фотографий для поста
             con.query(rawGetPhotoesQuery,
             (err, photoes) => {
@@ -266,7 +345,10 @@ class PostGetter {
                     reject({
                         operation: `Get Dislikes to post ${post.idPost}`,
                         status: 'SQL Error',
-                        result: err
+                        data: {
+                            requestFor: 'get one post',
+                            response: err.message
+                        }
                     })
                 }
                 else{

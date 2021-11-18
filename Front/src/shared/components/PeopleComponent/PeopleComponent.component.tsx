@@ -1,5 +1,6 @@
 /* tslint:disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { uniqBy } from "lodash";
 import Container from "../Container/Container.Pages.styled";
 import StyledPeopleComponent from "./PeopleComponent.styled";
 import Label from "./Label";
@@ -41,8 +42,6 @@ const PeopleComponent = ({
   const [selectedTab, setSelectedTab] = useState(1);
   const [onReadyToCallNextPage, setReadyToCallNextPage] = useState(false);
 
-  const timeHandler = useRef<any>();
-
   socket.on(
     "User Searcher Response",
     (
@@ -51,7 +50,7 @@ const PeopleComponent = ({
         api.models.IAvailableUserActions
       >
     ) => {
-      clearTimeout(timeHandler.current);
+      console.log(res.data.response);
 
       if (res.data.requestFor === "Search Peoples") {
         if (res.status === "Not Found") {
@@ -61,13 +60,12 @@ const PeopleComponent = ({
           onError((res.data.response as unknown) as string);
         }
         if (res.status === "OK") {
-          timeHandler.current = setTimeout(() => {
-            let newFeed = searchedPeoples.concat(res.data.response);
-            console.log(newFeed);
-            setSearchedPeoples(newFeed);
-            setReadyToCallNextPage(true);
-          }, 1);
+          setSearchedPeoples(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idUsers")
+          );
         }
+        setReadyToCallNextPage(true);
+        socket.removeEventListener("User Searcher Response");
       }
     }
   );
@@ -101,28 +99,28 @@ const PeopleComponent = ({
 
   //error => onError("Server Error, Please, try again")
 
-  const searchPeople = (
-    filter = filters,
-    preloadedPeople = searchedPeoples.length
-  ) => {
-    sendToSocket<
-      api.models.ISearchUserRequest,
-      api.models.IAvailableUserActions
-    >(socket, {
-      operation: "User Searcher Request",
-      data: {
-        requestFor: "Search Peoples",
-        options: {
-          currentUser: currentUser.username,
-          searchedUser: currentUser.username,
-          filters: filter,
-          page: preloadedPeople
-        }
-      },
-      token
-    });
-    setReadyToCallNextPage(false);
-  };
+  const searchPeople = useCallback(
+    (filter = filters, preloadedPeople = searchedPeoples.length) => {
+      sendToSocket<
+        api.models.ISearchUserRequest,
+        api.models.IAvailableUserActions
+      >(socket, {
+        operation: "User Searcher Request",
+        data: {
+          requestFor: "Search Peoples",
+          options: {
+            currentUser: currentUser.username,
+            searchedUser: currentUser.username,
+            filters: filter,
+            page: preloadedPeople
+          }
+        },
+        token
+      });
+      setReadyToCallNextPage(false);
+    },
+    [filters, searchedPeoples.length]
+  );
 
   const searchFriends = (
     username: string,

@@ -1,6 +1,7 @@
 /* tslint:disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Container from "../Container/Container.Pages.styled";
+import { uniqBy } from "lodash";
 import AdaptiveBodyBlock, { Delimeter, Border } from "./BodyBlock.styled";
 import PageConstructor from "../../PageConstructor/PageConstructor";
 
@@ -40,9 +41,6 @@ const BodyBlock = ({
   const [selectedPostID, setSelectedPostID] = useState(0);
   const [comments, setComments] = useState<IComment[]>([]);
 
-  //Ссылка для таймера (нужен для создания асинхронности)
-  const timeHandler = useRef<any>();
-
   //Ссылка для тела компонента (нужна для рассчётов пропорций окна)
   const bodyBlockRef = useRef<HTMLDivElement>(null);
 
@@ -52,85 +50,49 @@ const BodyBlock = ({
     (
       res: socket.ISocketResponse<IPost[], api.models.IAvailablePostActions>
     ) => {
-      //При каждом срабатывании EventListener...
-      //Обнуляем таймер
-      clearTimeout(timeHandler.current);
-
-      //Проверяем, что это за операция к нам поступила в ответе
-      //Если это ответ на запрос о получении постов
       if (res.data.requestFor === "get all posts") {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
         if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.data.response}`);
           onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
+            `Connection error. Please, reload page. Stack: \n${res.data.response}`
           );
         }
-        //Если все хорошо
-        else if (res.data.response && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newGlobalPosts = Array.from(
-            new Set(globalPostsFeed.concat(res.data.response))
+        if (res.data.response && res.status === "OK") {
+          setGlobalPostsFeed(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idPost")
           );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newGlobalPosts);
-            setGlobalPostsFeed(newGlobalPosts);
-          }, 1);
-          setReadyToCallNextPage(true);
         }
+        socket.removeEventListener("Get Posts Response");
+        setReadyToCallNextPage(true);
       }
 
       if (res.data.requestFor === "get user public posts") {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
         if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.data.response}`);
           onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
+            `Connection error. Please, reload page. Stack: \n${res.data.response}`
           );
         }
-        //Если все хорошо
-        else if (res.data.response && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newUserPublicPosts = Array.from(
-            new Set(userPublicPostFeed.concat(res.data.response))
+        if (res.data.response && res.status === "OK") {
+          setPublicUserPostFeed(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idPost")
           );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newUserPublicPosts);
-            setPublicUserPostFeed(newUserPublicPosts);
-          }, 1);
-          setReadyToCallNextPage(true);
         }
+        socket.removeEventListener("Get Posts Response");
+        setReadyToCallNextPage(true);
       }
 
       if (res.data.requestFor === "get user private posts") {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
         if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.data.response}`);
           onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.data.response
-            )}`
+            `Connection error. Please, reload page. Stack: \n${res.data.response}`
           );
         }
-        //Если все хорошо
-        else if (res.data.response && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newUserPrivatePosts = Array.from(
-            new Set(userPrivatePostFeed.concat(res.data.response))
+        if (res.data.response && res.status === "OK") {
+          setPrivateUserPostFeed(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idPost")
           );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newUserPrivatePosts);
-            setPrivateUserPostFeed(newUserPrivatePosts);
-          }, 1);
-          setReadyToCallNextPage(true);
         }
+        socket.removeEventListener("Get Posts Response");
+        setReadyToCallNextPage(true);
       }
     }
   );
@@ -143,11 +105,8 @@ const BodyBlock = ({
       //Если это ответ на запрос о получении комментариев к посту
       if (res.data.requestFor === "get comments") {
         if (res.status === "OK") {
-          //Таймером устанавливаем список комментариев
-          timeHandler.current = setTimeout(() => {
-            console.log(res);
-            setComments((res.data.response as unknown) as IComment[]);
-          }, 1);
+          console.log(res);
+          setComments((res.data.response as unknown) as IComment[]);
         } else if (
           res.status === "Server Error" ||
           res.status === "SQL Error"
@@ -292,7 +251,7 @@ const BodyBlock = ({
     setComments(prevState => [...prevState, newComment]);
 
     sendToSocket<
-      api.models.ICreateCommentAction,
+      api.models.ICreateCommentRequest,
       api.models.IAvailablePostActions
     >(socket, {
       data: {

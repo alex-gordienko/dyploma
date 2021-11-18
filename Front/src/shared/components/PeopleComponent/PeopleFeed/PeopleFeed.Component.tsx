@@ -24,21 +24,21 @@ const PeopleFeed = ({
   onCallNextPage
 }: IFeedProps) => {
   const lastPostElement = useRef<HTMLDivElement>(null);
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      console.log("Visible");
+      if (data.length > 1) onCallNextPage();
+    }
+  });
 
   useEffect(() => {
     if (onReadyToCallNextPage && lastPostElement.current) {
-      var observer = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) {
-          console.log("Visible");
-          if (data.length > 1) onCallNextPage();
-        }
-      });
       observer.observe(lastPostElement.current);
       return () => {
         observer.disconnect();
       };
     }
-  }, [data.length, onReadyToCallNextPage]);
+  }, [data.length]);
 
   const loadMore = () => {
     onCallNextPage();
@@ -54,11 +54,17 @@ const PeopleFeed = ({
           </div>
         );
       })}
-      <ButtonBlock>
-        <div ref={lastPostElement} onClick={loadMore} className="label-button">
-          Load More
-        </div>
-      </ButtonBlock>
+      {onReadyToCallNextPage ? (
+        <ButtonBlock>
+          <div
+            ref={lastPostElement}
+            onClick={loadMore}
+            className="label-button"
+          >
+            Load More
+          </div>
+        </ButtonBlock>
+      ) : null}
     </StyledFeed>
   ) : (
     <StyledFeed>No Results Found, dude</StyledFeed>

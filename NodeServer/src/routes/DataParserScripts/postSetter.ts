@@ -35,7 +35,10 @@ class PostSetter {
             0,
             ${post.isPrivate})`;
 
-        return new Promise((resolve, reject)=>{
+        return new Promise((
+            resolve: (value: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
+        ) => {
         // Запрос 1.
         con.query(createPostQuery,
         async (err, postsData) => {
@@ -114,7 +117,7 @@ class PostSetter {
 
     public async createComment(
         operation: string,
-        data: api.models.ICreateCommentAction
+        data: api.models.ICreateCommentRequest
     ): Promise<socket.ISocketErrorResponse<api.models.IAvailablePostActions>> {
         const con = this.dbConnector;
 
