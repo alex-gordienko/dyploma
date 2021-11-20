@@ -37,15 +37,6 @@ export interface IGetCountriesAndCitiesAction {
   type: "getCountriesAndCities";
 }
 
-export interface ICreatePostAction {
-  type: "CreatePost";
-  newPost: IPost;
-}
-
-export interface IEditPostAction {
-  type: "EditExistPost";
-  editedPost: IPost;
-}
 export interface ISetEditedPostAction {
   type: "CheckPost";
   searchedPost: IPost | "new" | "No Results Found.";

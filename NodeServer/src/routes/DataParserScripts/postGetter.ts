@@ -20,7 +20,6 @@ class PostGetter {
         userId: number
     ): Promise<data.IPost> {
         const con = this.dbConnector;
-        const socket = this.socket;
 
         const getRawPostsQuery =
             `SELECT
@@ -37,7 +36,8 @@ class PostGetter {
             FROM Post
             JOIN Users
             WHERE Post.Users_idUsers = Users.idUsers
-            AND Post.idPost=${postID}`;
+            AND Users.idUsers = ${userId}
+            AND Post.idPost= ${postID}`;
 
         return new Promise((
             resolve: (value: data.IPost) => void,
@@ -56,11 +56,8 @@ class PostGetter {
                     })
                 }
                 else {
-                    const JSONpost = parseData(postsData) as data.IRawPostData;
-                    if (JSONpost.idUser !== userId) {
-
-                    }
-                    resolve(toDataPost(JSONpost))
+                    const JSONpost = parseData(postsData) as data.IRawPostData[];
+                    resolve(toDataPost(JSONpost[0]))
                 }
             })
         })
@@ -226,9 +223,9 @@ class PostGetter {
     }
 
     public async getLikes(
-        post: data.IPost,
+        post: Partial<data.IPost>,
         user: User,
-    ): Promise<data.IPost> {
+    ): Promise<Partial<data.IPost>> {
         const con = this.dbConnector;
         const getRawLikesQuery =
             `SELECT userId
@@ -238,7 +235,7 @@ class PostGetter {
             AND Post_has_Rate.rating=1
             AND Post_has_Rate.postId='${post.idPost}'`
         return new Promise((
-            resolve: (value: data.IPost) => void,
+            resolve: (value: Partial<data.IPost>) => void,
             reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
         ) => {
             // Запрос 2. Получаем лайки
@@ -255,29 +252,26 @@ class PostGetter {
                     });
                 }
                 else{
-
-                    let isLikedByMe = false;
                     const JSONlikes = parseData<{userId: number}[]>(likes);
+                    const isLikedByMe = JSONlikes.find(like => like.userId === user.id) ? true : false;
 
-                    if(JSONlikes.length>0){
-                        isLikedByMe = JSONlikes.find(like => like.userId === user.id) ? true : false;
-                        post.rating.likes = JSONlikes.length;
-                        post.rating.isLikedByMe = isLikedByMe;
-                    }
-                    else {
-                        post.rating.likes = 0;
-                        post.rating.isLikedByMe = false;
-                    }
-                    resolve(post)
+                    resolve({
+                        ...post,
+                        rating: {
+                            ...post.rating!,
+                            likes: JSONlikes.length,
+                            isLikedByMe
+                        }
+                    })
                 }
             })
         })
     }
 
     public async getDisLikes(
-        post: data.IPost,
+        post: Partial<data.IPost>,
         user: User
-    ): Promise<data.IPost> {
+    ): Promise<Partial<data.IPost>> {
         const con = this.dbConnector;
         const rawGetDislikesQuery =
             `SELECT userId
@@ -288,7 +282,7 @@ class PostGetter {
             AND Post_has_Rate.postId='${post.idPost}'`;
 
         return new Promise((
-            resolve: (value: data.IPost) => void,
+            resolve: (value: Partial<data.IPost>) => void,
             reject: (reason: socket.ISocketErrorResponse<api.models.IAvailablePostActions>) => void
         ) => {
             // Запрос 3. Получаем дизлайки
@@ -305,25 +299,23 @@ class PostGetter {
                     })
                 }
                 else{
-                    let isDislikedByMe = false;
                     const JSONdislikes = parseData<{userId: number}[]>(disLikes);
+                    const isDislikedByMe = JSONdislikes.find(like => like.userId === user.id) ? true : false;
 
-                    if(JSONdislikes.length > 0) {
-                        isDislikedByMe = JSONdislikes.find(like => like.userId === user.id) ? true : false;
-                        post.rating.dislikes=JSONdislikes.length;
-                        post.rating.isDislikedByMe=isDislikedByMe;
-                    }
-                    else {
-                        post.rating.dislikes=0;
-                        post.rating.isDislikedByMe=false;
-                    }
-                    resolve(post)
+                    resolve({
+                        ...post,
+                        rating: {
+                            ...post.rating!,
+                            dislikes: JSONdislikes.length,
+                            isDislikedByMe
+                        }
+                    })
                 }
             })
         })
     }
 
-    public async getPhotoes (post: data.IPost): Promise<data.IPost> {
+    public async getPhotoes (post: Partial<data.IPost>): Promise<data.IPost> {
         const con = this.dbConnector;
         const directory = this.photoDirectory;
 
@@ -359,7 +351,7 @@ class PostGetter {
                     }))
 
                     resolve({
-                        ...post,
+                        ...post as data.IPost,
                         photoes: postPhotoes
                     })
                 }

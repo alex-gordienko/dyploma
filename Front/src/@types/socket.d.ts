@@ -3,10 +3,11 @@ declare namespace socket {
     | "Client Login Request"
     | "Get Posts Request"
     | "Post Editor Request"
-    | "Get contries request"
-    | "User editor request"
+    | "Get Contries Request"
+    | "User Editor Request"
     | "User Searcher Request"
-    | "Comments Request";
+    | "Comments Request"
+    | "Rating Request";
 
   type AvailableResponseRoutes =
     | "Client Login Response"
@@ -14,7 +15,8 @@ declare namespace socket {
     | "Post Editor Response"
     | "User editor response"
     | "User Searcher Response"
-    | "Comments Response";
+    | "Comments Response"
+    | "Rating Response";
 
   type ResponseStatus =
     | "OK"

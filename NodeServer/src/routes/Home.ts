@@ -391,18 +391,19 @@ const Home = (server: https.Server | http.Server) => {
                                 // Получаем посты
                                 postGetter.getOnePost(msg.operation, typedMessage.data.options.postID, Number(user.id))
                                     .then(postPattern => {
+                                        console.log(postPattern);
                                         // Затем для каждого получаем лайки
-                                        console.log(`\t\t\x1b[33m Gettin likes to posts ${postPattern.idPost}`)
+                                        console.log(`\t\t\x1b[33m Gettin likes to post ${postPattern.idPost}`)
                                         return postGetter.getLikes(postPattern, user)
                                     })
                                     .then(postWithLikes => {
                                         // Затем для каждого получаем дизлайки
-                                        console.log(`\t\t\x1b[33m Gettin dislikes to posts ${postWithLikes.idPost}`)
+                                        console.log(`\t\t\x1b[33m Gettin dislikes to post ${postWithLikes.idPost}`)
                                         return postGetter.getDisLikes(postWithLikes, user)
                                     })
                                     .then(postWithFullRating => {
                                         // Затем для каждого получаем фотографии
-                                        console.log(`\t\t\x1b[33m Gettin photoes to posts ${postWithFullRating.idPost}`)
+                                        console.log(`\t\t\x1b[33m Gettin photoes to post ${postWithFullRating.idPost}`)
                                         return postGetter.getPhotoes(postWithFullRating)
                                     })
                                     .then(compiledPost => {
@@ -461,9 +462,17 @@ const Home = (server: https.Server | http.Server) => {
                                 })
                                 .then(resolve => {
                                     console.log(`\t\x1b[32m Success saved photoes on disk and DB...`);
+                                    const response: socket.ISocketResponse<null, api.models.IAvailablePostActions> = {
+                                        operation: 'Post Editor Response',
+                                        status: resolve.status,
+                                        data: {
+                                            requestFor: msg.data.requestFor,
+                                            response: null
+                                        }
+                                    };
                                     socket.emit<socket.AvailableResponseRoutes>(
                                         'Post Editor Response',
-                                        resolve
+                                        response
                                     )
                                 })
                                 .catch(reject => {
@@ -491,6 +500,64 @@ const Home = (server: https.Server | http.Server) => {
                         }
                     }
                 });
+            
+            socket.on<socket.AvailableRequestRoutes>('Rating Request',
+                async (msg: socket.ISocketRequest<api.models.ISetPostRatingRequest, api.models.IAvailableRatingActions>
+                ) => {
+                    switch (msg.data.requestFor) {
+                        case 'set post rating': {
+                            console.log(`\n\x1b[33m User ${user.name} is trying to set ${msg.data.options.setting}...`);
+                            postSetter.setPostRating(msg.operation, msg.data.options)
+                                .then(_setRatingResponse => {
+                                    return postGetter.getLikes(
+                                            { idPost: msg.data.options.idPost },
+                                            user)
+                                })
+                                .then(postLikes => {
+                                    return postGetter.getDisLikes(
+                                        {
+                                            idPost: msg.data.options.idPost,
+                                            rating: postLikes.rating
+                                        },
+                                        user
+                                    )
+                                }).then(postRating => {
+                                    const response = {
+                                        operation: msg.operation,
+                                        status: 'OK',
+                                        data: {
+                                            requestFor: msg.data.requestFor,
+                                            response: postRating,
+                                        }
+                                    };
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'Rating Response',
+                                        response
+                                    )
+                                }).catch(err => {
+                                    console.log(`\t\x1b[31m Error when set post rating: ${JSON.stringify(err)}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'Rating Response',
+                                        err
+                                    )
+                                });
+                            break;
+                        }
+                        default: {
+                            console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`);
+                            socket.emit<socket.AvailableResponseRoutes>(
+                                'Rating Response',
+                                {
+                                    operation: msg.operation,
+                                    status: 'Unknown operation',
+                                    data: {
+                                        requestFor: msg.data.requestFor,
+                                        response: 'unknown operation'
+                                    }
+                                })
+                        }
+                    }
+                })
 
             socket.on<socket.AvailableRequestRoutes>('User Searcher Request',
                 async (msg: socket.ISocketRequest<api.models.ISearchUserRequest, api.models.IAvailableUserActions>

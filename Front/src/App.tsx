@@ -28,8 +28,6 @@ import {
   logIn,
   saveUserDataToCookie,
   logOut,
-  createPost,
-  editPost,
   setEditedPost,
   createProfile,
   editProfile,
@@ -132,9 +130,9 @@ const App = () => {
     sendToSocket(socket, {
       data: {
         options: {},
-        requestFor: "Get contries request"
+        requestFor: "Get Contries Request"
       },
-      operation: "Get contries request",
+      operation: "Get Contries Request",
       token
     });
     await dispatch(setProgress("Ready..."));
@@ -242,63 +240,18 @@ const App = () => {
   const PostEditor = () => {
     const { postID } = useParams<{ postID: string }>();
 
-    const loadData = () => {
-      if (postID === "new") {
-        dispatch(setEditedPost("new"));
-        dispatch(isLoading(false));
-        dispatch(setProgress("Gettin info about post..."));
-      } else {
-        sendToSocket<
-          api.models.IGetPostToEditRequest,
-          api.models.IAvailablePostActions
-        >(socket, {
-          data: {
-            options: { postID: Number(postID) },
-            requestFor: "get one post"
-          },
-          operation: "Post Editor Request",
-          token
-        });
-      }
-    };
-
-    async function createNewPost(newPost: IPost) {
-      await dispatch(isLoading(false));
-      await dispatch(createPost(newPost));
-      await dispatch(isLoading(true));
-    }
-
-    async function EditPost(editedPost: IPost) {
-      await dispatch(isLoading(false));
-      await dispatch(editPost(editedPost));
-      await dispatch(isLoading(true));
-    }
-
-    return isReady ? (
-      isLogin ? (
-        editedPost === "new" ||
-        editedPost === "No Results Found." ||
-        editedPost.idUser === 0 ? (
-          <CreatePost
-            type="Create"
-            loadData={loadData}
-            currentUser={user}
-            createNewPost={createNewPost}
-          />
-        ) : (
-          <CreatePost
-            type="Edit"
-            currentUser={user}
-            loadData={loadData}
-            existPost={editedPost}
-            saveChanges={EditPost}
-          />
-        )
-      ) : (
-        <Redirect to={"/login"} />
-      )
+    return isLogin ? (
+      <CreatePost
+        socket={socket}
+        token={token}
+        postId={postID === "new" ? "new" : Number(postID)}
+        currentUser={user}
+        onError={e => {
+          dispatch(setErrorMessage(e));
+        }}
+      />
     ) : (
-      <Preloader message={progressMessage} />
+      <Redirect to={"/login"} />
     );
   };
 

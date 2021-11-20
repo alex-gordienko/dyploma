@@ -5,10 +5,6 @@ import {
   ILogInAction,
   ISaveUserDataAction,
   ILogOutAction,
-  IGetPostsAction,
-  INewPost,
-  ICreatePostAction,
-  IEditPostAction,
   ISetEditedPostAction,
   IProfileAction,
   IFullDataUser,
@@ -49,16 +45,6 @@ const getCountriesAndCities = (
   type: "getCountriesAndCities"
 });
 
-const createPost = (newPost: IPost): ICreatePostAction => ({
-  newPost,
-  type: "CreatePost"
-});
-
-const editPost = (editedPost: IPost): IEditPostAction => ({
-  editedPost,
-  type: "EditExistPost"
-});
-
 const setEditedPost = (
   searchedPost: IPost | "new" | "No Results Found."
 ): ISetEditedPostAction => ({
@@ -88,8 +74,6 @@ export {
   saveUserDataToCookie,
   logOut,
   getCountriesAndCities,
-  createPost,
-  editPost,
   setEditedPost,
   editProfile,
   createProfile

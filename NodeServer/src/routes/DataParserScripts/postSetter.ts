@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { Connection } from 'mysql2';
+import { RowDataPacket } from 'mysql2/promise';
 import { Socket } from 'socket.io';
 
 class PostSetter {
@@ -114,7 +115,6 @@ class PostSetter {
         })
     }
 
-
     public async createComment(
         operation: string,
         data: api.models.ICreateCommentRequest
@@ -154,6 +154,69 @@ class PostSetter {
                             status: 'OK',
                             data: {
                                 requestFor: 'create comment',
+                                response: 'Success'
+                            }
+                        });
+                    }
+                })
+        })
+    }
+
+    public async setPostRating(
+        requestedOperation: string,
+        data: api.models.ISetPostRatingRequest
+    ): Promise<socket.ISocketErrorResponse<api.models.IAvailableRatingActions>> {
+        const con = this.dbConnector;
+        let rate = 1; // like or dislike
+        let query = '';
+
+        if (data.setting === 'like') rate = 1; else rate = -1;
+        
+        const checkRateByMe =
+            `SELECT rating FROM Post_has_Rate
+				WHERE Post_has_Rate.postId=${data.idPost}
+				AND Post_has_Rate.userId=${data.idUser}`;
+			
+		const getMyPostsRate = await con.promise().query(checkRateByMe);
+
+        if ((getMyPostsRate[0] as RowDataPacket[])[0]) {
+            // if user is already liked/disliked this post
+            if (data.type === 'inversion') {
+                // if user want to remove his rate
+                query = `DELETE FROM Post_has_Rate WHERE postId=${data.idPost} AND userId=${data.idUser}`;
+            }
+            else {
+                // if user wants to change like to dislike or same
+                query = `UPDATE Post_has_Rate SET rating=${rate} WHERE postId=${data.idPost} AND userId=${data.idUser}`;
+            }
+        }
+        else {
+            query = `INSERT INTO Post_has_Rate VALUES(${data.idPost},${data.idUser},${rate})`;
+        }
+
+        return new Promise((
+            resolve: (value: socket.ISocketErrorResponse<api.models.IAvailableRatingActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableRatingActions>) => void
+        ) => {
+            con.query(query,
+            async (err, result) => {
+                    if(err) {
+                        // Если ошибка подключения к бд
+                        reject({
+                            operation: requestedOperation,
+                            status: 'SQL Error',
+                            data: {
+                                response: err.message,
+                                requestFor: 'set post rating'
+                            }
+                        });
+                    }
+                    else{
+                        resolve({
+                            operation: requestedOperation,
+                            status: 'OK',
+                            data: {
+                                requestFor: 'set post rating',
                                 response: 'Success'
                             }
                         });

@@ -9,6 +9,7 @@ import GoogleMapBlock from "../GoogleMapBlock";
 import Feed from "../Feed";
 import { IPost, IComment, IFullDataUser } from "../../../App.types";
 import { sendToSocket } from "../../../backend/httpGet";
+import { generateDate } from "../utils/generateData";
 
 const isCommentData = (data: any): data is IComment[] =>
   Object.prototype.toString.call(data) === "[object Array]" &&
@@ -70,6 +71,14 @@ const BodyBlock = ({
           onError(
             `Connection error. Please, reload page. Stack: \n${res.data.response}`
           );
+        }
+        if (res.status === "Not Found") {
+          if (
+            userPublicPostFeed.length > 1 &&
+            userPublicPostFeed[0].username !== isAnotherUser
+          ) {
+            setPublicUserPostFeed([]);
+          }
         }
         if (res.data.response && res.status === "OK") {
           setPublicUserPostFeed(prevState =>
@@ -138,40 +147,42 @@ const BodyBlock = ({
     }
   );
 
-  socket.on("Get User Public Posts Response", (res: any) => {
-    if (res.result === "No Results Found.") {
-      if (userPublicPostFeed.length > 1)
-        if (userPublicPostFeed[0].username !== isAnotherUser)
-          setPublicUserPostFeed([]);
-    } else {
-      let newFeed = userPublicPostFeed.concat(res.result);
-      setPublicUserPostFeed(newFeed);
+  socket.on(
+    "Rating Response",
+    (
+      res: socket.ISocketResponse<IPost, api.models.IAvailableRatingActions>
+    ) => {
+      if (res.data.requestFor === "set post rating") {
+        if (res.status === "OK") {
+          if (isAnotherUser) {
+            setPublicUserPostFeed(prevState => {
+              return prevState.map(post => {
+                let updatedPost = post;
+                if (post.idPost === res.data.response.idPost)
+                  updatedPost.rating = res.data.response.rating;
+                return updatedPost;
+              });
+            });
+          } else {
+            setGlobalPostsFeed(prevState => {
+              return prevState.map(post => {
+                let updatedPost = post;
+                if (post.idPost === res.data.response.idPost)
+                  updatedPost.rating = res.data.response.rating;
+                return updatedPost;
+              });
+            });
+          }
+        }
+      } else {
+        onError(
+          `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+            res.data.response
+          )}`
+        );
+      }
     }
-  });
-
-  socket.on("Set Rating Response", (res: any) => {
-    if (isAnotherUser) {
-      setPublicUserPostFeed(prevState => {
-        return prevState.map(post => {
-          let updatedPost = post;
-          if (post.idPost === res.result.IdPost)
-            updatedPost.rating = res.result.rating;
-          return updatedPost;
-        });
-      });
-    } else {
-      setGlobalPostsFeed(prevState => {
-        return prevState.map(post => {
-          let updatedPost = post;
-          if (post.idPost === res.result.IdPost)
-            updatedPost.rating = res.result.rating;
-          return updatedPost;
-        });
-      });
-    }
-  });
-
-  //(error) => {}
+  );
 
   const loadMorePosts = (
     postIDs = Array.from(globalPostsFeed, post => post.idPost)
@@ -221,26 +232,13 @@ const BodyBlock = ({
   };
 
   const onCreateComment = (idPost: number, comment: string) => {
-    var d = new Date();
-    var dateTime: string =
-      d.getFullYear() +
-      "-" +
-      (d.getMonth() + 1) +
-      "-" +
-      d.getDate() +
-      " " +
-      d.getHours() +
-      ":" +
-      d.getMinutes() +
-      ":" +
-      d.getSeconds();
     const prevPostState =
       mode === "Main Page"
         ? globalPostsFeed.filter(post => post.idPost === idPost)
         : userPublicPostFeed.filter(post => post.idPost === idPost);
     const newComment: IComment = {
       content: comment,
-      date: dateTime,
+      date: generateDate(),
       author: currentUser.username,
       rating: 0,
       userAvatar: currentUser.avatar,
@@ -286,40 +284,44 @@ const BodyBlock = ({
     post: number,
     type: "new" | "inversion" | "from dislike"
   ) => {
-    const postData =
-      '{ "operation": "set rating"' +
-      ', "json": {' +
-      ' "idUser": ' +
-      currentUser.idUsers +
-      ', "data": ' +
-      '{ "idPost": ' +
-      post +
-      ', "setting": "like"' +
-      ', "type":"' +
-      type +
-      '"}' +
-      "}}";
-    // sendData("createpost.php", postData);
+    sendToSocket<
+      api.models.ISetPostRatingRequest,
+      api.models.IAvailableRatingActions
+    >(socket, {
+      data: {
+        options: {
+          idUser: currentUser.idUsers,
+          idPost: post,
+          setting: "like",
+          type
+        },
+        requestFor: "set post rating"
+      },
+      operation: "Rating Request",
+      token
+    });
   };
 
   const onSetDislike = (
     post: number,
     type: "new" | "inversion" | "from like"
   ) => {
-    const postData =
-      '{ "operation": "set rating"' +
-      ', "json": {' +
-      ' "idUser": ' +
-      currentUser.idUsers +
-      ', "data": ' +
-      '{ "idPost": ' +
-      post +
-      ', "setting": "dislike"' +
-      ', "type":"' +
-      type +
-      '"}' +
-      "}}";
-    // sendData("createpost.php", postData);
+    sendToSocket<
+      api.models.ISetPostRatingRequest,
+      api.models.IAvailableRatingActions
+    >(socket, {
+      data: {
+        options: {
+          idUser: currentUser.idUsers,
+          idPost: post,
+          setting: "dislike",
+          type
+        },
+        requestFor: "set post rating"
+      },
+      operation: "Rating Request",
+      token
+    });
   };
 
   var pageSize = bodyBlockRef.current

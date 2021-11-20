@@ -8,8 +8,6 @@ import {
   IGetPostsAction,
   IAppState,
   IPhotoBuffer,
-  ICreatePostAction,
-  IEditPostAction,
   IProfileAction,
   ISetEditedPostAction,
   IGetCountriesAndCitiesAction,
@@ -78,8 +76,6 @@ export type IAppActions =
   | ILogOutAction
   | IGetPostsAction
   | IGetCountriesAndCitiesAction
-  | ICreatePostAction
-  | IEditPostAction
   | ISetEditedPostAction
   | IProfileAction;
 
@@ -130,31 +126,6 @@ const initialState: IAppState = {
 };
 
 const reducer = (state: IAppState, action: IAppActions) => {
-  state.socket.on(
-    "Post Editor Response",
-    (
-      res: socket.ISocketResponse<
-        IPost | string,
-        api.models.IAvailablePostActions
-      >
-    ) => {
-      state.progressMessage = "Almost done...";
-      if (res.data.requestFor === "get one post") {
-        if (res.status === "OK") {
-          state.editedPost = res.data.response as IPost;
-          state.isReady = true;
-        }
-      }
-      if (res.data.requestFor === "create post") {
-        if (res.status === "OK") {
-          alert("Successful! Please, wait until your post will accept");
-        } else {
-          state.errorMessage = res.data.response as string;
-        }
-      }
-    }
-  );
-
   state.socket.on("Edit User", (res: any) => {
     if (res.operation === "Edit User") {
       if (JSON.stringify(res.result) === '"Successful"') {
@@ -189,7 +160,7 @@ const reducer = (state: IAppState, action: IAppActions) => {
             },
             requestFor: "Edit User"
           },
-          operation: "User editor request",
+          operation: "User Editor Request",
           token: state.token
         }
       );
@@ -212,49 +183,13 @@ const reducer = (state: IAppState, action: IAppActions) => {
             },
             requestFor: "Create User"
           },
-          operation: "User editor request",
+          operation: "User Editor Request",
           token: state.token
         }
       );
       return {
         ...state
       };
-    }
-    case "CreatePost": {
-      sendToSocket<IPost, api.models.IAvailablePostActions>(state.socket, {
-        data: {
-          options: {
-            ...action.newPost
-          },
-          requestFor: "create post"
-        },
-        operation: "Post Editor Request",
-        token: state.token
-      });
-      return {
-        ...state
-      };
-    }
-    case "EditExistPost": {
-      // console.log("Edited info about post ",action.editedPost.idPost);
-      // console.log(action.editedPost);
-      if (action.editedPost !== state.editedPost) {
-        if (state.user.idUsers === action.editedPost.idUser) {
-          sendToSocket<IPost, api.models.IAvailablePostActions>(state.socket, {
-            data: {
-              options: {
-                ...action.editedPost
-              },
-              requestFor: "edit post"
-            },
-            operation: "Post Editor Request",
-            token: state.token
-          });
-        }
-      } else {
-        alert("There is no changes");
-      }
-      return { ...state };
     }
     case "getCountriesAndCities": {
       return { ...state, country_city: action.countries };
