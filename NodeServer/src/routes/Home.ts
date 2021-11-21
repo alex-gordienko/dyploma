@@ -500,7 +500,7 @@ const Home = (server: https.Server | http.Server) => {
                         }
                     }
                 });
-            
+
             socket.on<socket.AvailableRequestRoutes>('Rating Request',
                 async (msg: socket.ISocketRequest<api.models.ISetPostRatingRequest, api.models.IAvailableRatingActions>
                 ) => {
@@ -565,7 +565,7 @@ const Home = (server: https.Server | http.Server) => {
                     switch (msg.data.requestFor) {
                         case 'Search Peoples': {
                             console.log(`\n\x1b[33m User ${user.name} is trying to search users...`);
-                            user.searchPeople(msg.data.options)
+                            user.searchPeople(msg.data.options, user.id)
                                 .then(result => {
                                     console.log(`\t\x1b[32m Found ${result.data.response.length} results...`);
                                     socket.emit<socket.AvailableResponseRoutes>(
@@ -583,19 +583,79 @@ const Home = (server: https.Server | http.Server) => {
                             break;
                         }
                         case 'Search User': {
-                            console.log('Search User');
+                            console.log(`\n\x1b[33m User ${user.name} is trying to load ${msg.data.options.searchedUser}'s profile...`);
+                            user.loadUserProfile(msg.data.options)
+                                .then(searchResult => {
+                                    console.log(`\t\x1b[32m Found user. Sending result...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        searchResult
+                                    )
+                                })
+                                .catch(rejected => {
+                                    console.log(`\t\x1b[31m Error when search: ${JSON.stringify(rejected)}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        rejected
+                                    )
+                                });
                             break;
                         }
                         case 'Search Friends': {
-                            console.log('Search Friends');
+                            console.log(`\n\x1b[33m User ${user.name} is trying to load ${msg.data.options.searchedUser}'s friendList...`);
+                            user.searchFriends(msg.data.options)
+                                .then(searchResult => {
+                                    console.log(`\t\x1b[32m Found user. Sending result...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        searchResult
+                                    )
+                                })
+                                .catch(rejected => {
+                                    console.log(`\t\x1b[31m Error when search: ${JSON.stringify(rejected)}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        rejected
+                                    )
+                                });
                             break;
                         }
                         case 'Search Invites': {
-                            console.log('Search Invites');
+                            console.log(`\n\x1b[33m User ${user.name} is trying to load inviteList...`);
+                            user.searchInvites(msg.data.options, user.id)
+                                .then(searchResult => {
+                                    console.log(`\t\x1b[32m Found users. Sending result...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        searchResult
+                                    )
+                                })
+                                .catch(rejected => {
+                                    console.log(`\t\x1b[31m Error when search: ${JSON.stringify(rejected)}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        rejected
+                                    )
+                                });
                             break;
                         }
                         case 'Search Blocked': {
-                            console.log('Search Blocked');
+                           console.log(`\n\x1b[33m User ${user.name} is trying to load blockList...`);
+                            user.searchBlocked(msg.data.options, user.id)
+                                .then(searchResult => {
+                                    console.log(`\t\x1b[32m Found users. Sending result...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        searchResult
+                                    )
+                                })
+                                .catch(rejected => {
+                                    console.log(`\t\x1b[31m Error when search: ${JSON.stringify(rejected)}...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Searcher Response',
+                                        rejected
+                                    )
+                                });
                             break;
                         }
                         default: {

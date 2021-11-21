@@ -13,7 +13,7 @@ declare namespace socket {
     | "Client Login Response"
     | "Get Posts Response"
     | "Post Editor Response"
-    | "User editor response"
+    | "User Editor Response"
     | "User Searcher Response"
     | "Comments Response"
     | "Rating Response";

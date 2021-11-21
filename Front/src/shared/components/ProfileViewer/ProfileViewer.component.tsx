@@ -13,6 +13,7 @@ import { Redirect, NavLink } from "react-router-dom";
 import BodyBlock from "../BodyBlock";
 import { sendToSocket } from "../../../backend/httpGet";
 import defaultAvatar from "../../../assets/img/DefaultPhoto.jpg";
+import Preloader from "../Preloader";
 
 interface IProfileViewerProps {
   socket: SocketIOClient.Socket;
@@ -54,54 +55,44 @@ const ProfileViewer = ({
     username: ""
   };
   var nullFilter = { username: "", country: "", city: "", date: "" };
-  const nullPosts: IPost[] = [];
   const [userProfile, setUserProfile] = useState<ISearchedUser>(user);
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+  const [isFriendListLoaded, setIsFrienListLoaded] = useState(false);
   const [friends, setFriends] = useState([user]);
-  const [userPost, setUserPost] = useState(nullPosts);
-  const [privatePosts, setPrivatePosts] = useState(nullPosts);
-  const [feed, setFeed] = useState(nullPosts);
   const [selectedTab, setSelectedTab] = useState(1);
 
-  socket.on("Search User Response", (res: any) => {
-    if (res.result === "User not found. Try again") {
-    } else setUserProfile(res.result);
-  });
+  useEffect(() => {
+    if (isProfileLoaded && isFriendListLoaded) {
+      socket.removeEventListener("User Searcher Response");
+    }
+  }, [isProfileLoaded, isFriendListLoaded]);
 
-  socket.on("Search Friends Response", (res: any) => {
-    if (res.result === "Friends not found") {
-    } else setFriends(res.result);
-  });
-
-  socket.on("Get User Public Posts Response", (res: any) => {
-    if (res.result === "No Results Found.") {
-      if (userPost.length > 0 && userPost[0].username !== username) {
-        setUserPost([]);
-        setFeed([]);
-      }
-    } else {
-      if (userPost.length > 0) {
-        if (userPost[0].username !== username) {
-          setUserPost(res.result);
-          setFeed(res.result);
+  socket.on(
+    "User Searcher Response",
+    (
+      res: socket.ISocketResponse<
+        string | ISearchedUser | ISearchedUser[],
+        api.models.IAvailableUserActions
+      >
+    ) => {
+      if (res.data.requestFor === "Search User") {
+        if (res.status === "OK") {
+          console.log(res.data.response);
+          setUserProfile(res.data.response as ISearchedUser);
+          setIsProfileLoaded(true);
+        } else {
+          onError(res.data.response as string);
         }
-      } else {
-        let newFeed = userPost.concat(res.result);
-        setUserPost(newFeed);
-        setFeed(newFeed);
+      }
+      if (res.data.requestFor === "Search Friends") {
+        if (res.status === "OK") {
+          console.log(res.data.response);
+          setFriends(res.data.response as ISearchedUser[]);
+          setIsFrienListLoaded(true);
+        }
       }
     }
-  });
-
-  socket.on("Get User Private Posts Response", (res: any) => {
-    if (res.result === "No Results Found.") {
-      if (privatePosts.length > 1) setPrivatePosts([]);
-    } else {
-      let newFeed = privatePosts.concat(res.result);
-      setPrivatePosts(newFeed);
-    }
-  });
-
-  //error => onError("Error connection to the server")
+  );
 
   const searchProfile = (username = currentUser.username) => {
     sendToSocket<
@@ -123,19 +114,22 @@ const ProfileViewer = ({
   };
 
   const searchFriends = (username = currentUser.username) => {
-    let postData =
-      '{ "operation": "Search Friends", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(nullFilter) +
-      "," +
-      '"page": 0 ' +
-      "}}";
-    console.log("ProfileViewer.component.tsx 132 -> Try to send data");
-    // sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Friends",
+        options: {
+          currentUser: currentUser.username,
+          searchedUser: username,
+          filters: nullFilter,
+          page: 0
+        }
+      },
+      token
+    });
   };
 
   useEffect(() => {
@@ -148,12 +142,9 @@ const ProfileViewer = ({
       searchProfile();
       searchFriends();
     }
+    setIsProfileLoaded(false);
+    setIsFrienListLoaded(false);
   }, [username]);
-
-  useEffect(() => {
-    if (selectedTab === 1) setFeed(userPost);
-    else if (selectedTab === 2) setFeed(privatePosts);
-  }, [selectedTab]);
 
   const getRedirect = () => {
     if (redirect) {
@@ -169,7 +160,7 @@ const ProfileViewer = ({
   const handleLabelCommand = () => {
     setRedirect(true);
   };
-  return userProfile ? (
+  return isProfileLoaded && isFriendListLoaded ? (
     <SubContainer>
       {getRedirect()}
       <Label
@@ -221,7 +212,9 @@ const ProfileViewer = ({
         </div>
       </StyledEditorBlock>
     </SubContainer>
-  ) : null;
+  ) : (
+    <Preloader message="Loading Profile Data..." />
+  );
 };
 
 export default ProfileViewer;

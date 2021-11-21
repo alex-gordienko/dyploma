@@ -278,34 +278,19 @@ const App = () => {
     );
   };
   const ProfileEdit = () => {
-    const handleEditUserChange = (user: IFullDataUser) => {
-      dispatch(isLoading(false));
-      dispatch(editProfile(user));
-      dispatch(isLoading(true));
-    };
-    const handleCreateUserChange = (user: IFullDataUser) => {
-      dispatch(isLoading(false));
-      dispatch(createProfile(user));
-      dispatch(isLoading(true));
-    };
-
-    return isReady ? (
-      isLogin ? (
-        <ProfileEditor
-          contries={country_city.country}
-          cities={country_city.city}
-          userData={user}
-          onUserUpdate={handleEditUserChange}
-        />
-      ) : (
-        <ProfileEditor
-          contries={country_city.country}
-          cities={country_city.city}
-          onUserCreate={handleCreateUserChange}
-        />
-      )
+    return isLogin ? (
+      <ProfileEditor
+        contries={country_city.country}
+        cities={country_city.city}
+        userData={user}
+        onUserUpdate={handleEditUserChange}
+      />
     ) : (
-      <Preloader message={progressMessage} />
+      <ProfileEditor
+        contries={country_city.country}
+        cities={country_city.city}
+        onUserCreate={handleCreateUserChange}
+      />
     );
   };
 

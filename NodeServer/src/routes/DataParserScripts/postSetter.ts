@@ -171,12 +171,12 @@ class PostSetter {
         let query = '';
 
         if (data.setting === 'like') rate = 1; else rate = -1;
-        
+
         const checkRateByMe =
             `SELECT rating FROM Post_has_Rate
 				WHERE Post_has_Rate.postId=${data.idPost}
 				AND Post_has_Rate.userId=${data.idUser}`;
-			
+
 		const getMyPostsRate = await con.promise().query(checkRateByMe);
 
         if ((getMyPostsRate[0] as RowDataPacket[])[0]) {

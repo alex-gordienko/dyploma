@@ -22,3 +22,7 @@ export const Status = styled.div`
   color: ${props => props.theme.colors.primaryBackground};
   font-style: oblique;
 `;
+
+export const ProfileEditButton = styled.div`
+  width: min-content;
+`;

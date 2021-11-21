@@ -30,4 +30,16 @@ export const toDataPost = (rawPost: data.IRawPostData): data.IPost => ({
         isLikedByMe: false,
         isDislikedByMe: false
     }
+});
+
+export const toApiSearchedUser = (rawUser: data.ISearchedUser): api.models.ISearchedUser => ({
+    ...rawUser,
+    rating: Number(rawUser.rating),
+    idUsers: Number(rawUser.idUsers),
+    isBanned: Boolean(rawUser.isBanned),
+    isConfirm: Boolean(rawUser.isConfirm),
+    isOnline: Boolean(rawUser.isOnline),
+    isMyFriend: rawUser.isMyFriend ? Boolean(rawUser.isMyFriend) : undefined,
+    isSubscribition: rawUser.isSubscribition ? Boolean(rawUser.isSubscribition) : undefined,
+    isBlocked: rawUser.isBlocked ? Boolean(rawUser.isBlocked) : undefined,
 })

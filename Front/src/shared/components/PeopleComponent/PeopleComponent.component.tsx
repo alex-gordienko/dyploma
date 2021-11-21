@@ -51,6 +51,7 @@ const PeopleComponent = ({
       >
     ) => {
       console.log(res.data.response);
+      socket.removeEventListener("User Searcher Response");
 
       if (res.data.requestFor === "Search Peoples") {
         if (res.status === "Not Found") {
@@ -65,39 +66,51 @@ const PeopleComponent = ({
           );
         }
         setReadyToCallNextPage(true);
-        socket.removeEventListener("User Searcher Response");
+      }
+      if (res.data.requestFor === "Search Friends") {
+        if (res.status === "Not Found") {
+          if (friends.length < 1) setFriends([]);
+        }
+        if (res.status === "SQL Error") {
+          onError((res.data.response as unknown) as string);
+        }
+        if (res.status === "OK") {
+          setFriends(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idUsers")
+          );
+        }
+        setReadyToCallNextPage(true);
+      }
+      if (res.data.requestFor === "Search Invites") {
+        if (res.status === "Not Found") {
+          if (invites.length < 1) setInvites([]);
+        }
+        if (res.status === "SQL Error") {
+          onError((res.data.response as unknown) as string);
+        }
+        if (res.status === "OK") {
+          setInvites(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idUsers")
+          );
+        }
+        setReadyToCallNextPage(true);
+      }
+      if (res.data.requestFor === "Search Blocked") {
+        if (res.status === "Not Found") {
+          if (blocked.length < 1) setBlocked([]);
+        }
+        if (res.status === "SQL Error") {
+          onError((res.data.response as unknown) as string);
+        }
+        if (res.status === "OK") {
+          setBlocked(prevState =>
+            uniqBy([...prevState, ...res.data.response], "idUsers")
+          );
+        }
+        setReadyToCallNextPage(true);
       }
     }
   );
-
-  // socket.on("User Searcher Response", (res: any) => {
-  //   if (res.result === "No Results Found") {
-  //     if (searchedPeoples.length < 1) setSearchedPeoples([]);
-  //   } else {
-  //     let newFeed = searchedPeoples.concat(res.result);
-  //     setSearchedPeoples(newFeed);
-  //   }
-  // });
-
-  socket.on("Search Invites Response", (res: any) => {
-    if (res.result === "Invites not found") {
-      if (invites.length < 1) setInvites([]);
-    } else {
-      let newFeed = invites.concat(res.result);
-      setInvites(newFeed);
-    }
-  });
-
-  socket.on("Search Blocked Response", (res: any) => {
-    if (res.result === "Blocks not found") {
-      if (blocked.length < 1) setBlocked([]);
-    } else {
-      let newFeed = blocked.concat(res.result);
-      setBlocked(newFeed);
-    }
-  });
-
-  //error => onError("Server Error, Please, try again")
 
   const searchPeople = useCallback(
     (filter = filters, preloadedPeople = searchedPeoples.length) => {

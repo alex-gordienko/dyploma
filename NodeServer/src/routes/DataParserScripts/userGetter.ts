@@ -1,5 +1,7 @@
 import { Connection } from 'mysql2';
-import { parseData } from './utils';
+import { RowDataPacket } from 'mysql2/promise';
+import { parseData, toApiSearchedUser } from './utils';
+import fs from 'fs';
 class User {
     protected userID: number;
     protected username: string;
@@ -112,8 +114,100 @@ class User {
         })
     }
 
+    public async editUser (
+        userId: number,
+        request: api.models.IUser
+    ): Promise<socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>> {
+        const rawGetUserQuery =
+            `SELECT idUsers,
+                regDate,
+                isConfirm,
+                isBanned,
+                username,
+                FirstName,
+                LastName,
+                Birthday,
+                Country,
+                City,
+                Status,
+                email,
+                phone,
+                rating,
+                avatar,
+                crypt_pass AS password
+            FROM Users
+            WHERE idUsers=${userId}`;
+
+        let updateUserQuery = `UPDATE Users SET `;
+
+        return new Promise(async (
+            resolve: (value: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
+        ) => {
+            const rawDBUser = await this.dbConnector.promise().query(rawGetUserQuery);
+
+            const rawUser = (rawDBUser[0] as RowDataPacket[])[0] as api.models.IUser | undefined;
+            if (!rawUser) {
+                 reject({
+                    status: 'Not Found',
+                    operation: 'User Editor Response',
+                        data: {
+                        requestFor: 'Edit User',
+                        response: 'Not Found'
+                    }
+                 });
+                return null
+            }
+
+            if (request.username !== rawUser.username) updateUserQuery += `username = '${request.username}',`;
+            if (request.FirstName !== rawUser.FirstName) updateUserQuery += ` FirstName = '${request.FirstName}',`;
+            if (request.LastName !== rawUser.LastName) updateUserQuery += `LastName = '${request.LastName}',`;
+            if (request.Status !== rawUser.Status) updateUserQuery += ` Status = '${request.Status}',`;
+            if (request.Country !== rawUser.Country) updateUserQuery += ` Country = '${request.Country}',`;
+            if (request.City !== rawUser.City) updateUserQuery += ` City = '${request.City}',`;
+            if (request.email !== rawUser.email) updateUserQuery += ` email = '${request.email}',`;
+            if (request.phone !== rawUser.phone) updateUserQuery += ` phone = '${request.phone}',`;
+            if (request.password !== rawUser.password) updateUserQuery += ` crypt_pass = '${request.password}',`;
+            if (request.avatar !== rawUser.avatar) {
+                const newAvatar = request.avatar.replace(/^data:([A-Za-z-+\/]+);base64,/,'');
+                fs.writeFileSync(`/srv/windows/dyploma/Photoes/All/${rawUser.idUsers}/avatar.jpg`, newAvatar, 'base64');
+                updateUserQuery += ` avatar = '${request.avatar}'`;
+            };
+
+            updateUserQuery += ` WHERE idUsers=${userId}`;
+
+            this.dbConnector.query(updateUserQuery,
+                async (err, userData) => {
+                    if(err) {
+                        // Если ошибка подключения к бд
+                        reject({
+                            status: 'SQL Error',
+                            operation: 'User Editor Response',
+                             data: {
+                                requestFor: 'Edit User',
+                                response: err.message
+                            }
+                        });
+                    }
+                    else{
+                        // Сохраняем в объекте класса айди пользователя для дальнейших манипуляций
+                        resolve({
+                            status: 'OK',
+                            operation: 'User Editor Response',
+                            data: {
+                                requestFor: 'Edit User',
+                                response: rawUser
+                            }
+                        });
+                    }
+                })
+        })
+    }
+
     public async searchPeople (
-        request: api.models.ISearchUserRequest
+        request: api.models.ISearchUserRequest,
+        userId: number,
+        pageSize = 10,
     ): Promise<socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>> {
         let rawSearchUserQuery = `SELECT idUsers,
 				Country,
@@ -155,14 +249,14 @@ class User {
         }
         rawSearchUserQuery +=
             ` AND Users.idUsers NOT IN(
-    				SELECT BlackList.black_two FROM Users JOIN BlackList 
+    				SELECT BlackList.black_two FROM Users JOIN BlackList
 				    WHERE Users.idUsers=BlackList.black_one
-    				AND BlackList.black_one=(SELECT idUsers from Users WHERE username='${request.currentUser}')
+    				AND BlackList.black_one=${userId}
 			) AND Users.idUsers NOT IN(
-    				SELECT BlackList.black_one FROM Users JOIN BlackList 
+    				SELECT BlackList.black_one FROM Users JOIN BlackList
 				    WHERE Users.idUsers=BlackList.black_two
-    				AND BlackList.black_two=(SELECT idUsers from Users WHERE username='${request.currentUser}')
-			) LIMIT ${request.page},10`;
+    				AND BlackList.black_two=${userId}
+			) LIMIT ${request.page},${pageSize}`;
 
         return new Promise((
             resolve: (value: socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>) => void,
@@ -184,8 +278,6 @@ class User {
                     else {
                         const JSONUsers = parseData<data.ISearchedUser[]>(userData);
 
-                        console.log(JSONUsers);
-
                         if (!JSONUsers.length) {
                             reject({
                                 status: 'Not Found',
@@ -198,17 +290,7 @@ class User {
                         }
 
                         const searshResult: api.models.ISearchedUser[] =
-                            JSONUsers.map((rawUser: data.ISearchedUser) => ({
-                                ...rawUser,
-                                rating: Number(rawUser.rating),
-                                idUsers: Number(rawUser.idUsers),
-                                isBanned: Boolean(rawUser.isBanned),
-                                isConfirm: Boolean(rawUser.isConfirm),
-                                isOnline: Boolean(rawUser.isOnline),
-                                isMyFriend: rawUser.isMyFriend ? Boolean(rawUser.isMyFriend) : undefined,
-                                isSubscribition: rawUser.isSubscribition ? Boolean(rawUser.isSubscribition) : undefined,
-                                isBlocked: rawUser.isBlocked ? Boolean(rawUser.isBlocked) : undefined,
-                        }))
+                            JSONUsers.map(toApiSearchedUser)
 
                         resolve({
                             operation: 'User Searcher Response',
@@ -221,6 +303,412 @@ class User {
                      }
                 });
             })
+    };
+
+    public async searchFriends (
+        request: api.models.ISearchUserRequest,
+        pageSize = 10
+    ): Promise<socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>> {
+        let rawSearchUserQuery = `SELECT idUsers,
+				Country,
+				City,
+				isOnline,
+				isBanned,
+				isConfirm,
+				lastOnline,
+				username,
+				FirstName,
+				LastName,
+				Birthday,
+				rating,
+				avatar,
+                true as 'isMyFriend'
+			FROM Users WHERE`;
+
+        if (request.filters.username.length) {
+            rawSearchUserQuery += ` username LIKE '%${request.filters.username}%'`;
+        }
+        if (request.filters.country.length) {
+            rawSearchUserQuery += ` Country='${request.filters.country}'`;
+        }
+        if (request.filters.city.length) {
+            rawSearchUserQuery += ` City='${request.filters.city}'`;
+        }
+        if (request.filters.date.length) {
+            rawSearchUserQuery += ` Birthday='${request.filters.date}'`;
+        }
+        const isEmptyFilter =
+            !request.filters.username.length &&
+            !request.filters.country.length &&
+            !request.filters.city.length &&
+            !request.filters.date.length;
+        if (isEmptyFilter) {
+            rawSearchUserQuery += ' 1';
+        }
+        rawSearchUserQuery +=
+            ` AND Users.idUsers IN(
+    				SELECT FriendList.friend_two FROM Users JOIN FriendList
+				WHERE Users.idUsers=FriendList.friend_one
+				AND FriendList.status='good'
+    				AND FriendList.friend_one=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+			) OR Users.idUsers IN(
+    				SELECT FriendList.friend_one FROM Users JOIN FriendList
+				WHERE Users.idUsers=FriendList.friend_two
+				AND FriendList.status='good'
+    				AND FriendList.friend_two=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+			) AND Users.idUsers NOT IN(
+    				SELECT BlackList.black_two FROM Users JOIN BlackList
+				WHERE Users.idUsers=BlackList.black_one
+    				AND BlackList.black_one=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+			) AND Users.idUsers NOT IN(
+    				SELECT BlackList.black_one FROM Users JOIN BlackList
+				WHERE Users.idUsers=BlackList.black_two
+    				AND BlackList.black_two=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+			) LIMIT ${request.page},${pageSize}`;
+
+        return new Promise((
+            resolve: (value: socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
+        ) => {
+            this.dbConnector.query(rawSearchUserQuery,
+                async (err, userData) => {
+                    if (err) {
+                        // Если ошибка подключения к бд
+                        reject({
+                            status: 'SQL Error',
+                            operation: 'User Searcher Request',
+                            data: {
+                                requestFor: 'Search Friends',
+                                response: err.message
+                            }
+                        });
+                    }
+                    else {
+                        const JSONUsers = parseData<data.ISearchedUser[]>(userData);
+
+                        if (!JSONUsers.length) {
+                            reject({
+                                status: 'Not Found',
+                                operation: 'User Searcher Request',
+                                data: {
+                                    requestFor: 'Search Friends',
+                                    response: 'Not Found'
+                                }
+                            })
+                        }
+
+                        const searshResult: api.models.ISearchedUser[] =
+                            JSONUsers.map(toApiSearchedUser)
+
+                        resolve({
+                            operation: 'User Searcher Response',
+                            status: 'OK',
+                            data: {
+                                requestFor: 'Search Friends',
+                                response: searshResult
+                            }
+                        })
+                     }
+                });
+            })
+    };
+
+    public async searchInvites (
+        request: api.models.ISearchUserRequest,
+        userId: number,
+        pageSize = 10
+    ): Promise<socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>> {
+        let rawSearchUserQuery = `SELECT idUsers,
+				Country,
+				City,
+				isOnline,
+				isBanned,
+				isConfirm,
+				lastOnline,
+				username,
+				FirstName,
+				LastName,
+				Birthday,
+				rating,
+				avatar
+			FROM Users WHERE`;
+
+        if (request.filters.username.length) {
+            rawSearchUserQuery += ` username LIKE '%${request.filters.username}%'`;
+        }
+        if (request.filters.country.length) {
+            rawSearchUserQuery += ` Country='${request.filters.country}'`;
+        }
+        if (request.filters.city.length) {
+            rawSearchUserQuery += ` City='${request.filters.city}'`;
+        }
+        if (request.filters.date.length) {
+            rawSearchUserQuery += ` Birthday='${request.filters.date}'`;
+        }
+        const isEmptyFilter =
+            !request.filters.username.length &&
+            !request.filters.country.length &&
+            !request.filters.city.length &&
+            !request.filters.date.length;
+        if (isEmptyFilter) {
+            rawSearchUserQuery += ' 1';
+        }
+        rawSearchUserQuery +=
+            ` AND Users.idUsers IN(
+    				SELECT FriendList.friend_two FROM Users JOIN FriendList
+				WHERE Users.idUsers=FriendList.friend_one
+				AND FriendList.status='almost'
+    				AND FriendList.friend_one=${userId}
+			) OR Users.idUsers IN(
+    				SELECT FriendList.friend_one FROM Users JOIN FriendList
+				WHERE Users.idUsers=FriendList.friend_two
+				AND FriendList.status='almost'
+    				AND FriendList.friend_two=${userId}
+			) AND Users.idUsers NOT IN(
+    				SELECT BlackList.black_two FROM Users JOIN BlackList
+				WHERE Users.idUsers=BlackList.black_one
+    				AND BlackList.black_one=${userId}
+			) AND Users.idUsers NOT IN(
+    				SELECT BlackList.black_one FROM Users JOIN BlackList
+				WHERE Users.idUsers=BlackList.black_two
+    				AND BlackList.black_two=${userId}
+			) LIMIT ${request.page},${pageSize}`;
+
+        return new Promise((
+            resolve: (value: socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
+        ) => {
+            this.dbConnector.query(rawSearchUserQuery,
+                async (err, userData) => {
+                    if (err) {
+                        // Если ошибка подключения к бд
+                        reject({
+                            status: 'SQL Error',
+                            operation: 'User Searcher Request',
+                            data: {
+                                requestFor: 'Search Invites',
+                                response: err.message
+                            }
+                        });
+                    }
+                    else {
+                        const JSONUsers = parseData<data.ISearchedUser[]>(userData);
+
+                        if (!JSONUsers.length) {
+                            reject({
+                                status: 'Not Found',
+                                operation: 'User Searcher Request',
+                                data: {
+                                    requestFor: 'Search Invites',
+                                    response: 'Not Found'
+                                }
+                            })
+                        }
+
+                        const searshResult: api.models.ISearchedUser[] =
+                            JSONUsers.map(toApiSearchedUser)
+
+                        resolve({
+                            operation: 'User Searcher Response',
+                            status: 'OK',
+                            data: {
+                                requestFor: 'Search Invites',
+                                response: searshResult
+                            }
+                        })
+                     }
+                });
+            })
+    };
+
+    public async searchBlocked (
+        request: api.models.ISearchUserRequest,
+        userId: number,
+        pageSize = 10
+    ): Promise<socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>> {
+        let rawSearchUserQuery = `SELECT idUsers,
+				Country,
+				City,
+				isOnline,
+				isBanned,
+				isConfirm,
+				lastOnline,
+				username,
+				FirstName,
+				LastName,
+				Birthday,
+				rating,
+				avatar
+			FROM Users WHERE`;
+
+        if (request.filters.username.length) {
+            rawSearchUserQuery += ` username LIKE '%${request.filters.username}%'`;
+        }
+        if (request.filters.country.length) {
+            rawSearchUserQuery += ` Country='${request.filters.country}'`;
+        }
+        if (request.filters.city.length) {
+            rawSearchUserQuery += ` City='${request.filters.city}'`;
+        }
+        if (request.filters.date.length) {
+            rawSearchUserQuery += ` Birthday='${request.filters.date}'`;
+        }
+        const isEmptyFilter =
+            !request.filters.username.length &&
+            !request.filters.country.length &&
+            !request.filters.city.length &&
+            !request.filters.date.length;
+        if (isEmptyFilter) {
+            rawSearchUserQuery += ' 1';
+        }
+        rawSearchUserQuery +=
+            ` AND Users.idUsers IN(
+    				SELECT BlackList.black_two FROM Users JOIN BlackList
+				WHERE Users.idUsers=BlackList.black_one
+    				AND BlackList.black_one=${userId}
+			) OR Users.idUsers IN(
+    				SELECT BlackList.black_one FROM Users JOIN BlackList
+				WHERE Users.idUsers=BlackList.black_two
+    				AND BlackList.black_two=${userId}
+			) LIMIT ${request.page},${pageSize}`;
+
+        return new Promise((
+            resolve: (value: socket.ISocketResponse<api.models.ISearchedUser[], api.models.IAvailableUserActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
+        ) => {
+            this.dbConnector.query(rawSearchUserQuery,
+                async (err, userData) => {
+                    if (err) {
+                        // Если ошибка подключения к бд
+                        reject({
+                            status: 'SQL Error',
+                            operation: 'User Searcher Request',
+                            data: {
+                                requestFor: 'Search Blocked',
+                                response: err.message
+                            }
+                        });
+                    }
+                    else {
+                        const JSONUsers = parseData<data.ISearchedUser[]>(userData);
+
+                        if (!JSONUsers.length) {
+                            reject({
+                                status: 'Not Found',
+                                operation: 'User Searcher Request',
+                                data: {
+                                    requestFor: 'Search Blocked',
+                                    response: 'Not Found'
+                                }
+                            })
+                        }
+
+                        const searshResult: api.models.ISearchedUser[] =
+                            JSONUsers.map(toApiSearchedUser)
+
+                        resolve({
+                            operation: 'User Searcher Response',
+                            status: 'OK',
+                            data: {
+                                requestFor: 'Search Blocked',
+                                response: searshResult
+                            }
+                        })
+                     }
+                });
+            })
+    };
+
+    public async loadUserProfile(
+        request: api.models.ISearchUserRequest
+    ): Promise<socket.ISocketResponse<api.models.ISearchedUser, api.models.IAvailableUserActions>> {
+        let isMyFriend = false;
+        let isBlocked = false;
+
+        const loadUserProfileQuery = `SELECT idUsers,
+				isOnline,
+				isBanned,
+				isConfirm,
+				lastOnline,
+				username,
+				Country,
+				City,
+				FirstName,
+				LastName,
+				Birthday,
+				Status,
+				email,
+				phone,
+				rating,
+				avatar
+			FROM Users WHERE username='${request.searchedUser}'`;
+
+        const checkIsMyFriendQuery = `SELECT idUsers
+				FROM Users WHERE Users.idUsers IN(
+	    				SELECT FriendList.friend_two FROM Users JOIN FriendList
+					WHERE Users.idUsers=FriendList.friend_one
+					AND FriendList.status='good'
+	    				AND FriendList.friend_one=(SELECT idUsers from Users WHERE username='${request.currentUser}')
+					AND FriendList.friend_two=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+				) OR Users.idUsers IN(
+	    				SELECT FriendList.friend_one FROM Users JOIN FriendList
+					WHERE Users.idUsers=FriendList.friend_two
+					AND FriendList.status='good'
+					AND FriendList.friend_one=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+	    				AND FriendList.friend_two=(SELECT idUsers from Users WHERE username='${request.currentUser}')
+				)`;
+
+        const checkIsBlockedUserQuery = `SELECT idUsers
+				FROM Users WHERE Users.idUsers IN(
+	    				SELECT BlackList.black_two FROM Users JOIN BlackList
+					WHERE Users.idUsers=BlackList.black_one
+	    				AND BlackList.black_one=(SELECT idUsers from Users WHERE username='${request.currentUser}')
+					AND BlackList.black_two=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+				) OR Users.idUsers IN(
+	    				SELECT BlackList.black_one FROM Users JOIN BlackList
+					WHERE Users.idUsers=BlackList.black_two
+					AND BlackList.black_one=(SELECT idUsers from Users WHERE username='${request.searchedUser}')
+	    				AND BlackList.black_two=(SELECT idUsers from Users WHERE username='${request.currentUser}')
+				)`;
+
+        const checkIsMyFriend = await this.dbConnector.promise().query(checkIsMyFriendQuery);
+        const checkIsBlockedUser = await this.dbConnector.promise().query(checkIsBlockedUserQuery);
+
+        if ((checkIsMyFriend[0] as RowDataPacket[])[0]) { isMyFriend = true };
+        if ((checkIsBlockedUser[0] as RowDataPacket[])[0]) { isBlocked = true };
+
+        return new Promise((
+            resolve: (value: socket.ISocketResponse<api.models.ISearchedUser, api.models.IAvailableUserActions>) => void,
+            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
+        ) => {
+            this.dbConnector.query(loadUserProfileQuery,
+                async (err, userData) => {
+                    if (err) {
+                        // Если ошибка подключения к бд
+                        reject({
+                            status: 'SQL Error',
+                            operation: 'User Searcher Response',
+                            data: {
+                                requestFor: 'Search User',
+                                response: err.message
+                            }
+                        });
+                    }
+                    else {
+                        const JSONUser = parseData<api.models.ISearchedUser[]>(userData)[0];
+                        if(JSONUser && JSONUser.avatar) JSONUser.avatar = Buffer.from(JSONUser.avatar).toString();
+                        const fullUserData: api.models.ISearchedUser = { ...JSONUser, isMyFriend, isBlocked };
+                        resolve({
+                            operation: 'User Searcher Response',
+                            status: 'OK',
+                            data: {
+                                requestFor: 'Search User',
+                                response: fullUserData
+                            }
+                        })
+                    }
+                })
+         })
     }
 }
 
