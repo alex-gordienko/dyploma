@@ -78,11 +78,8 @@ const Home = (server: https.Server | http.Server) => {
                                 .catch((rejected) => {
                                     console.log(`\t\x1b[31m Client ${msg.data.options.login} connection Error: \n\t${rejected}`);
                                     socket.emit<socket.AvailableResponseRoutes>(
-                                        'Client Login Response',
-                                        {
-                                            status: 'Server Error',
-                                            result: rejected
-                                        })
+                                        'Client Login Response', rejected
+                                    )
                                 });
                         }
                         catch (e) {
@@ -99,6 +96,35 @@ const Home = (server: https.Server | http.Server) => {
                         }
                     }
                 });
+
+            socket.on<socket.AvailableRequestRoutes>('User Editor Request',
+                async (msg: socket.ISocketRequest<api.models.IUser, api.models.IAvailableUserActions>) => {
+                    switch (msg.data.requestFor) {
+                        case 'Edit User': {
+                            console.log(`\n\x1b[33m User ${user.name} want's to change info about himself`);
+                            user.editUser(user.id, msg.data.options)
+                                .then(resolve => {
+                                    return user.getUser(resolve.data.response.idUsers)
+                                })
+                                .then(updatedUserData => {
+                                    const response: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions> = {
+                                        operation: 'User Editor Response',
+                                        status: 'OK',
+                                        data: {
+                                            requestFor: 'Edit User',
+                                            response: updatedUserData
+                                        }
+                                    }
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Editor Response', response
+                                    )
+                                }).catch(rejected => {
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'User Editor Response', rejected)
+                                })
+                        }
+                    }
+            })
 
             // Обработчик запросов для работы с постами
             socket.on<socket.AvailableRequestRoutes>('Get Posts Request',

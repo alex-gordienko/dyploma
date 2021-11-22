@@ -29,7 +29,6 @@ import {
   saveUserDataToCookie,
   logOut,
   setEditedPost,
-  createProfile,
   editProfile,
   getCountriesAndCities
 } from "./App.actions";
@@ -277,19 +276,30 @@ const App = () => {
       <Preloader message={progressMessage} />
     );
   };
+
   const ProfileEdit = () => {
     return isLogin ? (
       <ProfileEditor
+        socket={socket}
+        token={token}
         contries={country_city.country}
         cities={country_city.city}
-        userData={user}
-        onUserUpdate={handleEditUserChange}
+        currentUser={user}
+        onUpdateUserData={user => dispatch(editProfile(user))}
+        onError={e => {
+          dispatch(setErrorMessage(e));
+        }}
       />
     ) : (
       <ProfileEditor
+        socket={socket}
+        token={token}
         contries={country_city.country}
         cities={country_city.city}
-        onUserCreate={handleCreateUserChange}
+        onUpdateUserData={user => dispatch(editProfile(user))}
+        onError={e => {
+          dispatch(setErrorMessage(e));
+        }}
       />
     );
   };

@@ -8,20 +8,24 @@ import { StyledEditorBlock } from "./ProfileEditor.styled";
 import { SubHeader } from "../EditorComponents/EditorComponents.styled";
 import { IFullDataUser } from "../../../App.types";
 import { Redirect } from "react-router-dom";
+import { sendToSocket } from "../../../backend/httpGet";
+import Preloader from "../Preloader";
 
 interface IProfileEditorProps {
-  user?: IFullDataUser;
+  currentUser?: IFullDataUser;
   contries: { id: number; name_en: string }[];
   cities: { id: number; country_id: number; name_en: string }[];
   socket: SocketIOClient.Socket;
   token: string;
+  onUpdateUserData: (user: IFullDataUser) => void;
   onError: (message: string) => void;
 }
 
 const ProfileEditor = ({
-  user,
+  currentUser,
   socket,
   token,
+  onUpdateUserData,
   onError,
   contries,
   cities
@@ -33,7 +37,9 @@ const ProfileEditor = ({
 
   const getRedirect = () => {
     if (redirect) {
-      return <Redirect to={user ? "/profile/" + user.username : "/"} />;
+      return (
+        <Redirect to={currentUser ? "/profile/" + currentUser.username : "/"} />
+      );
     }
   };
 
@@ -41,124 +47,81 @@ const ProfileEditor = ({
     "User Editor Response",
     (
       res: socket.ISocketResponse<
-        ISearchedUser[],
+        IFullDataUser | string,
         api.models.IAvailableUserActions
       >
     ) => {
       console.log(res.data.response);
-      socket.removeEventListener("User Searcher Response");
+      socket.removeEventListener("User Editor Response");
 
-      if (res.data.requestFor === "Search Peoples") {
-        if (res.status === "Not Found") {
-          if (searchedPeoples.length < 1) setSearchedPeoples([]);
-        }
-        if (res.status === "SQL Error") {
-          onError((res.data.response as unknown) as string);
-        }
+      if (res.data.requestFor === "Edit User") {
         if (res.status === "OK") {
-          setSearchedPeoples(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
-          );
+          setIsReady(true);
+          onUpdateUserData(res.data.response as IFullDataUser);
+          setRedirect(true);
+        } else {
+          setIsReady(true);
+          onError(res.data.response as string);
         }
-        setReadyToCallNextPage(true);
-      }
-      if (res.data.requestFor === "Search Friends") {
-        if (res.status === "Not Found") {
-          if (friends.length < 1) setFriends([]);
-        }
-        if (res.status === "SQL Error") {
-          onError((res.data.response as unknown) as string);
-        }
-        if (res.status === "OK") {
-          setFriends(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
-          );
-        }
-        setReadyToCallNextPage(true);
-      }
-      if (res.data.requestFor === "Search Invites") {
-        if (res.status === "Not Found") {
-          if (invites.length < 1) setInvites([]);
-        }
-        if (res.status === "SQL Error") {
-          onError((res.data.response as unknown) as string);
-        }
-        if (res.status === "OK") {
-          setInvites(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
-          );
-        }
-        setReadyToCallNextPage(true);
-      }
-      if (res.data.requestFor === "Search Blocked") {
-        if (res.status === "Not Found") {
-          if (blocked.length < 1) setBlocked([]);
-        }
-        if (res.status === "SQL Error") {
-          onError((res.data.response as unknown) as string);
-        }
-        if (res.status === "OK") {
-          setBlocked(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
-          );
-        }
-        setReadyToCallNextPage(true);
       }
     }
   );
 
-  const searchPeople = useCallback(
-    (filter = filters, preloadedPeople = searchedPeoples.length) => {
-      sendToSocket<
-        api.models.ISearchUserRequest,
-        api.models.IAvailableUserActions
-      >(socket, {
-        operation: "User Searcher Request",
-        data: {
-          requestFor: "Search Peoples",
-          options: {
-            currentUser: currentUser.username,
-            searchedUser: currentUser.username,
-            filters: filter,
-            page: preloadedPeople
-          }
-        },
-        token
-      });
-      setReadyToCallNextPage(false);
-    },
-    [filters, searchedPeoples.length]
-  );
+  const onUserUpdate = (user: api.models.IUser) => {
+    sendToSocket<api.models.IUser, api.models.IAvailableUserActions>(socket, {
+      operation: "User Editor Request",
+      data: {
+        requestFor: "Edit User",
+        options: user
+      },
+      token
+    });
+    setIsReady(false);
+  };
+
+  const onUserCreate = (user: api.models.IUser) => {
+    sendToSocket<api.models.IUser, api.models.IAvailableUserActions>(socket, {
+      operation: "User Editor Request",
+      data: {
+        requestFor: "Create User",
+        options: user
+      },
+      token
+    });
+    setIsReady(false);
+  };
 
   const handleLabelCommand = (number: "Save" | "Cancel") => {
     if (childRef.current) {
       number === "Save" ? childRef.current.callSave() : setRedirect(true);
     }
   };
-  return (
+  return isReady ? (
     <SubContainer>
       {getRedirect()}
       <Label
         disabled={isDisabled}
         labelCommand={handleLabelCommand}
-        mode={userData ? "Edit" : "Create"}
+        mode={currentUser ? "Edit" : "Create"}
       >
-        {userData ? "Edit user " + userData.username : "Create"}
+        {currentUser ? "Edit user " + currentUser.username : "Create"}
       </Label>
       <StyledEditorBlock>
         <SubHeader>
-          {userData ? "Edit Profile Information" : "Add Profile Information"}
+          {currentUser ? "Edit Profile Information" : "Add Profile Information"}
         </SubHeader>
         <EditorBlock
           contries={contries}
           cities={cities}
           ref={childRef}
-          existUserData={userData}
-          saveUserChanges={userData ? onUserUpdate! : onUserCreate!}
+          existUserData={currentUser}
+          saveUserChanges={currentUser ? onUserUpdate : onUserCreate}
           isDisabledToApply={e => setIsDisabled(e)}
         />
       </StyledEditorBlock>
     </SubContainer>
+  ) : (
+    <Preloader message="Saving data..." />
   );
 };
 

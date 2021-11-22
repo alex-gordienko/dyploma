@@ -57,11 +57,6 @@ const editProfile = (userData: IFullDataUser): IProfileAction => ({
   userData
 });
 
-const createProfile = (userData: IFullDataUser): IProfileAction => ({
-  type: "CreateUser",
-  userData
-});
-
 const saveUserDataToCookie = (): ISaveUserDataAction => ({
   type: "SaveUserData"
 });
@@ -75,6 +70,5 @@ export {
   logOut,
   getCountriesAndCities,
   setEditedPost,
-  editProfile,
-  createProfile
+  editProfile
 };

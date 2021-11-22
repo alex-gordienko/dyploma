@@ -126,16 +126,6 @@ const initialState: IAppState = {
 };
 
 const reducer = (state: IAppState, action: IAppActions) => {
-  state.socket.on("Edit User", (res: any) => {
-    if (res.operation === "Edit User") {
-      if (JSON.stringify(res.result) === '"Successful"') {
-        alert("Successful. Profile data has changed");
-      } else {
-        state.errorMessage = res.result;
-      }
-    }
-  });
-
   state.socket.on("Create User", (res: any) => {
     if (res.operation === "Create User") {
       if (JSON.stringify(res.result) === '"Successful"') {
@@ -150,45 +140,9 @@ const reducer = (state: IAppState, action: IAppActions) => {
 
   switch (action.type) {
     case "EditUser": {
-      // console.log("Edit Existing user", action.userData);
-      sendToSocket<IFullDataUser, api.models.IAvailableUserActions>(
-        state.socket,
-        {
-          data: {
-            options: {
-              ...action.userData
-            },
-            requestFor: "Edit User"
-          },
-          operation: "User Editor Request",
-          token: state.token
-        }
-      );
       return {
         ...state,
         user: action.userData
-      };
-    }
-    case "CreateUser": {
-      // console.log("Creating New user", action.userData);
-      if (action.userData.avatar === defaultAvatar) {
-        action.userData.avatar = "";
-      }
-      sendToSocket<IFullDataUser, api.models.IAvailableUserActions>(
-        state.socket,
-        {
-          data: {
-            options: {
-              ...action.userData
-            },
-            requestFor: "Create User"
-          },
-          operation: "User Editor Request",
-          token: state.token
-        }
-      );
-      return {
-        ...state
       };
     }
     case "getCountriesAndCities": {

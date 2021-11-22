@@ -7,6 +7,7 @@ class User {
     protected username: string;
     protected identificator: string;
     protected dbConnector: Connection;
+    private userAvatarDirectory = '/srv/windows/dyploma/Photoes/All';
 
     constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
@@ -118,25 +119,7 @@ class User {
         userId: number,
         request: api.models.IUser
     ): Promise<socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>> {
-        const rawGetUserQuery =
-            `SELECT idUsers,
-                regDate,
-                isConfirm,
-                isBanned,
-                username,
-                FirstName,
-                LastName,
-                Birthday,
-                Country,
-                City,
-                Status,
-                email,
-                phone,
-                rating,
-                avatar,
-                crypt_pass AS password
-            FROM Users
-            WHERE idUsers=${userId}`;
+
 
         let updateUserQuery = `UPDATE Users SET `;
 
@@ -144,9 +127,8 @@ class User {
             resolve: (value: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>) => void,
             reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
         ) => {
-            const rawDBUser = await this.dbConnector.promise().query(rawGetUserQuery);
+            const rawUser = await this.getUser(userId);
 
-            const rawUser = (rawDBUser[0] as RowDataPacket[])[0] as api.models.IUser | undefined;
             if (!rawUser) {
                  reject({
                     status: 'Not Found',
@@ -169,12 +151,18 @@ class User {
             if (request.phone !== rawUser.phone) updateUserQuery += ` phone = '${request.phone}',`;
             if (request.password !== rawUser.password) updateUserQuery += ` crypt_pass = '${request.password}',`;
             if (request.avatar !== rawUser.avatar) {
-                const newAvatar = request.avatar.replace(/^data:([A-Za-z-+\/]+);base64,/,'');
-                fs.writeFileSync(`/srv/windows/dyploma/Photoes/All/${rawUser.idUsers}/avatar.jpg`, newAvatar, 'base64');
-                updateUserQuery += ` avatar = '${request.avatar}'`;
+                const newAvatar = request.avatar.replace(/^data:([A-Za-z-+\/]+);base64,/, '');
+                if (!fs.existsSync(this.userAvatarDirectory)) {
+                    fs.mkdirSync(this.userAvatarDirectory);
+                }
+                if (!fs.existsSync(`${this.userAvatarDirectory}/${rawUser.idUsers}`)) {
+                    fs.mkdirSync(`${this.userAvatarDirectory}/${rawUser.idUsers}`);
+                }
+                fs.writeFileSync(`${this.userAvatarDirectory}/${rawUser.idUsers}/avatar.jpg`, newAvatar, 'base64');
+                updateUserQuery += ` avatar = '${request.avatar}',`;
             };
 
-            updateUserQuery += ` WHERE idUsers=${userId}`;
+            updateUserQuery += ` idUsers = ${userId} WHERE idUsers=${userId}`;
 
             this.dbConnector.query(updateUserQuery,
                 async (err, userData) => {
@@ -709,6 +697,30 @@ class User {
                     }
                 })
          })
+    }
+
+    public async getUser(userId: number): Promise<api.models.IUser> {
+        const rawGetUserQuery =
+            `SELECT idUsers,
+                regDate,
+                isConfirm,
+                isBanned,
+                username,
+                FirstName,
+                LastName,
+                Birthday,
+                Country,
+                City,
+                Status,
+                email,
+                phone,
+                rating,
+                avatar,
+                crypt_pass AS password
+            FROM Users
+            WHERE idUsers=${userId}`;
+        const dbUser = await this.dbConnector.promise().query(rawGetUserQuery);
+        return parseData<api.models.IUser[]>(dbUser[0])[0]
     }
 }
 
