@@ -5,13 +5,11 @@ import { Socket } from 'socket.io';
 
 class PostSetter {
     protected dbConnector: Connection;
-    protected socket: Socket;
     // Директория с папками фотографий
     protected readonly photoDirectory = `/srv/windows/dyploma/Photoes/`;
 
-    constructor(dbConnector: Connection, socket: Socket){
+    constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
-        this.socket = socket;
     }
 
     public async createPost(
@@ -46,7 +44,7 @@ class PostSetter {
             if(err) {
                 // Если ошибка подключения к бд
                 reject({
-                    operation,
+                    operation: 'Post Editor Response',
                     status: 'SQL Error',
                      data: {
                         requestFor: 'create post',
@@ -56,7 +54,7 @@ class PostSetter {
             }
             else{
                 resolve({
-                    operation,
+                    operation: 'Post Editor Response',
                     status: 'OK',
                     data: {
                         requestFor: 'create post',
@@ -102,7 +100,7 @@ class PostSetter {
                     }
                     else{
                         resolve({
-                            operation,
+                            operation: 'Post Editor Response',
                             status: 'OK',
                             data: {
                                 requestFor: 'edit post',
@@ -140,7 +138,7 @@ class PostSetter {
                     if(err) {
                         // Если ошибка подключения к бд
                         reject({
-                            operation,
+                            operation: 'Comments Response',
                             status: 'SQL Error',
                             data: {
                                 response: err.message,
@@ -150,7 +148,7 @@ class PostSetter {
                     }
                     else{
                         resolve({
-                            operation,
+                            operation: 'Comments Response',
                             status: 'OK',
                             data: {
                                 requestFor: 'create comment',
@@ -203,7 +201,7 @@ class PostSetter {
                     if(err) {
                         // Если ошибка подключения к бд
                         reject({
-                            operation: requestedOperation,
+                            operation: 'Rating Response',
                             status: 'SQL Error',
                             data: {
                                 response: err.message,
@@ -213,7 +211,7 @@ class PostSetter {
                     }
                     else{
                         resolve({
-                            operation: requestedOperation,
+                            operation: 'Rating Response',
                             status: 'OK',
                             data: {
                                 requestFor: 'set post rating',

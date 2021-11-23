@@ -42,4 +42,14 @@ export const toApiSearchedUser = (rawUser: data.ISearchedUser): api.models.ISear
     isMyFriend: rawUser.isMyFriend ? Boolean(rawUser.isMyFriend) : undefined,
     isSubscribition: rawUser.isSubscribition ? Boolean(rawUser.isSubscribition) : undefined,
     isBlocked: rawUser.isBlocked ? Boolean(rawUser.isBlocked) : undefined,
-})
+});
+
+export const tokenGen = (length: number) => {
+  let rnd = "";
+  while (rnd.length < length) {
+    rnd += Math.random()
+      .toString(36)
+      .substring(2);
+  }
+  return rnd.substring(0, length);
+};

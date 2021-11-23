@@ -33,7 +33,7 @@ export interface IGetPostsAction {
 }
 
 export interface IGetCountriesAndCitiesAction {
-  countries: ICountriesAndCities;
+  countries: api.models.ICountriesAndCities;
   type: "getCountriesAndCities";
 }
 
@@ -54,7 +54,7 @@ export interface IAppState {
   progressMessage: string;
   errorMessage: string;
   isLogin: boolean;
-  country_city: ICountriesAndCities;
+  country_city: api.models.ICountriesAndCities;
   user: IFullDataUser;
   searchedUserPosts: IPost[];
   editedPost: IPost | "new" | "No Results Found.";
@@ -66,8 +66,8 @@ export interface IFullDataUser {
   Birthday: string;
   FirstName: string;
   LastName: string;
-  Status: string;
-  avatar: string;
+  Status: string | null;
+  avatar: string | null;
   email: string;
   regDate: string;
   isBanned: boolean;
@@ -91,18 +91,6 @@ export interface IUserPosition {
     lat: number;
     lng: number;
   };
-}
-
-export interface ICountriesAndCities {
-  country: Array<{
-    id: number;
-    name_en: string;
-  }>;
-  city: Array<{
-    id: number;
-    country_id: number;
-    name_en: string;
-  }>;
 }
 
 export interface IFilterProperties {

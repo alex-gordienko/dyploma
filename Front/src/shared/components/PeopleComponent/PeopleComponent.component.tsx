@@ -6,11 +6,7 @@ import StyledPeopleComponent from "./PeopleComponent.styled";
 import Label from "./Label";
 import PeopleFeed from "./PeopleFeed";
 import Filters from "../Filters";
-import {
-  IFullDataUser,
-  ISearchedUser,
-  ICountriesAndCities
-} from "../../../App.types";
+import { IFullDataUser, ISearchedUser } from "../../../App.types";
 import { Redirect } from "react-router-dom";
 import { sendToSocket } from "../../../backend/httpGet";
 

@@ -54,6 +54,16 @@ const ProfileEditor = ({
       console.log(res.data.response);
       socket.removeEventListener("User Editor Response");
 
+      if (res.data.requestFor === "Create User") {
+        if (res.status === "OK") {
+          alert("Successful registered. Check your email");
+          setIsReady(true);
+          setRedirect(true);
+        } else {
+          setIsReady(true);
+          onError(res.data.response as string);
+        }
+      }
       if (res.data.requestFor === "Edit User") {
         if (res.status === "OK") {
           setIsReady(true);
@@ -84,7 +94,10 @@ const ProfileEditor = ({
       operation: "User Editor Request",
       data: {
         requestFor: "Create User",
-        options: user
+        options: {
+          ...user,
+          avatar: RegExp(/\/static/).test(user.avatar) ? null : user.avatar
+        }
       },
       token
     });

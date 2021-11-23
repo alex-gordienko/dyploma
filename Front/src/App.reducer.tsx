@@ -28,6 +28,7 @@ import Photo1 from "./assets/img/Space1.jpg";
 import Photo2 from "./assets/img/Space2.jpg";
 import Photo3 from "./assets/img/Space3.jpg";
 import defaultAvatar from "./assets/img/DefaultPhoto.jpg";
+import { tokenGen } from "./shared/components/utils/tokenGen";
 
 const defaultUser: IFullDataUser = {
   Birthday: "",
@@ -88,16 +89,6 @@ export const getData = (name: "savedUser") => {
   return data;
 };
 
-const tokenGen = (length: number) => {
-  let rnd = "";
-  while (rnd.length < length) {
-    rnd += Math.random()
-      .toString(36)
-      .substring(2);
-  }
-  return rnd.substring(0, length);
-};
-
 const initialState: IAppState = {
   country_city: {
     city: [
@@ -126,18 +117,6 @@ const initialState: IAppState = {
 };
 
 const reducer = (state: IAppState, action: IAppActions) => {
-  state.socket.on("Create User", (res: any) => {
-    if (res.operation === "Create User") {
-      if (JSON.stringify(res.result) === '"Successful"') {
-        alert("Successful. User has been created. Please, Log In");
-      } else {
-        state.errorMessage = res.result;
-      }
-    }
-  });
-
-  // error => state.errorMessage="Connection Error. Is server online?"
-
   switch (action.type) {
     case "EditUser": {
       return {

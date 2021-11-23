@@ -1,17 +1,14 @@
 import { Connection } from 'mysql2';
-import { Socket } from 'socket.io';
 import User from './userGetter';
 import { getBaseFromFile, parseData, toDataPost } from './utils';
 
 class PostGetter {
     protected dbConnector: Connection;
-    protected socket: Socket;
     // Директория с папками фотографий
     protected readonly photoDirectory = `/srv/windows/dyploma/Photoes/`;
 
-    constructor(dbConnector: Connection, socket: Socket){
+    constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
-        this.socket = socket;
     }
 
     public async getOnePost(
@@ -47,7 +44,7 @@ class PostGetter {
             async (err, postsData) => {
                 if(err) {
                     reject({
-                        operation: requestedOperation,
+                        operation: 'Post Editor Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get one post',
@@ -69,7 +66,6 @@ class PostGetter {
         pageSize = 4
     ): Promise<data.IPost[]> {
         const con = this.dbConnector;
-        const socket = this.socket;
 
         const getRawPostsQuery =
             `SELECT
@@ -97,7 +93,7 @@ class PostGetter {
             async (err, postsData) => {
                 if(err) {
                     reject({
-                        operation: requestedOperation,
+                        operation: 'Get Posts Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get all posts',
@@ -121,7 +117,6 @@ class PostGetter {
         pageSize = 4
     ): Promise<data.IPost[]> {
         const con = this.dbConnector;
-        const socket = this.socket;
 
         const getRawPostsQuery =
             `SELECT
@@ -151,7 +146,7 @@ class PostGetter {
                 async (err, postsData) => {
                 if(err) {
                     reject({
-                        operation: requestedOperation,
+                        operation: 'Get Posts Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get user public posts',
@@ -175,7 +170,6 @@ class PostGetter {
         pageSize = 4
     ): Promise<data.IPost[]> {
         const con = this.dbConnector;
-        const socket = this.socket;
 
         const getRawPostsQuery =
             `SELECT
@@ -205,7 +199,7 @@ class PostGetter {
             async (err, postsData) => {
                 if(err) {
                     reject({
-                        operation: requestedOperation,
+                        operation: 'Get Posts Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get user private posts',
@@ -243,7 +237,7 @@ class PostGetter {
             async (err,likes) => {
                 if(err) {
                     reject({
-                        operation: `Get Likes to post ${post.idPost}`,
+                        operation: 'Get Posts Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get one post',
@@ -290,7 +284,7 @@ class PostGetter {
             async (err,disLikes) => {
                 if(err) {
                     reject({
-                        operation: `Get Dislikes to post ${post.idPost}`,
+                        operation: 'Get Posts Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get one post',
@@ -335,7 +329,7 @@ class PostGetter {
             (err, photoes) => {
                 if(err) {
                     reject({
-                        operation: `Get Dislikes to post ${post.idPost}`,
+                        operation: 'Get Posts Response',
                         status: 'SQL Error',
                         data: {
                             requestFor: 'get one post',

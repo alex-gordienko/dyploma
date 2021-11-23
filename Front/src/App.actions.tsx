@@ -9,7 +9,6 @@ import {
   IProfileAction,
   IFullDataUser,
   IPost,
-  ICountriesAndCities,
   IGetCountriesAndCitiesAction,
   ISearchedUser
 } from "./App.types";
@@ -39,7 +38,7 @@ const logOut = (): ILogOutAction => ({
 });
 
 const getCountriesAndCities = (
-  countries: ICountriesAndCities
+  countries: api.models.ICountriesAndCities
 ): IGetCountriesAndCitiesAction => ({
   countries,
   type: "getCountriesAndCities"

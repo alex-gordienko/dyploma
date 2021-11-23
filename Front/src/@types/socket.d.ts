@@ -3,7 +3,7 @@ declare namespace socket {
     | "Client Login Request"
     | "Get Posts Request"
     | "Post Editor Request"
-    | "Get Contries Request"
+    | "Get Countries Request"
     | "User Editor Request"
     | "User Searcher Request"
     | "Comments Request"
@@ -13,6 +13,7 @@ declare namespace socket {
     | "Client Login Response"
     | "Get Posts Response"
     | "Post Editor Response"
+    | "Get Countries Response"
     | "User Editor Response"
     | "User Searcher Response"
     | "Comments Response"
@@ -44,7 +45,7 @@ declare namespace socket {
   }
 
   interface ISocketErrorResponse<T> {
-    operation: string;
+    operation: AvailableResponseRoutes;
     status: ResponseStatus;
     data: {
       requestFor: T;

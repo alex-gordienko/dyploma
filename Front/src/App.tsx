@@ -93,16 +93,28 @@ const App = () => {
     }
   );
 
-  socket.on("Get Countries Response", (res: any) => {
-    dispatch(getCountriesAndCities(res.result));
-  });
-
-  socket.on("Get One Post Response", (res: any) => {
-    // console.log("searched post", res.result);
-    dispatch(setEditedPost(res.result));
-  });
-
-  // error => )
+  socket.on(
+    "Get Countries Response",
+    (
+      res: socket.ISocketResponse<
+        api.models.ICountriesAndCities | string,
+        api.models.IAvailableCountriesActions
+      >
+    ) => {
+      socket.removeEventListener("Get Countries Response");
+      if (res.data.requestFor === "Get Countries") {
+        if (res.status === "OK") {
+          dispatch(
+            getCountriesAndCities(
+              res.data.response as api.models.ICountriesAndCities
+            )
+          );
+        } else {
+          dispatch(setErrorMessage(res.data.response as string));
+        }
+      }
+    }
+  );
 
   const login = (bufLogin: string, bufPass: string) => {
     sendToSocket<api.models.ILoginRequest, api.models.IAvailableUserActions>(
@@ -126,12 +138,12 @@ const App = () => {
     const data: ISavedUser = await getStateFromStorage("savedUser");
     await login(data.username, data.password);
     await dispatch(setProgress("Update info about you..."));
-    sendToSocket(socket, {
+    sendToSocket<{}, api.models.IAvailableCountriesActions>(socket, {
       data: {
         options: {},
-        requestFor: "Get Contries Request"
+        requestFor: "Get Countries"
       },
-      operation: "Get Contries Request",
+      operation: "Get Countries Request",
       token
     });
     await dispatch(setProgress("Ready..."));

@@ -101,7 +101,7 @@ const EditorBlock = forwardRef(
     const inputOpenFileRef = useRef<HTMLInputElement>(null);
 
     const showOpenFileDlg = () => {
-      if (inputOpenFileRef.current !== null) {
+      if (inputOpenFileRef.current) {
         inputOpenFileRef.current.click();
       }
     };

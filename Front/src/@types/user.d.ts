@@ -27,8 +27,8 @@ declare namespace api.models {
     Birthday: string;
     FirstName: string;
     LastName: string;
-    Status: string;
-    avatar: string;
+    Status: string | null;
+    avatar: string | null;
     email: string;
     regDate: string;
     isBanned: boolean;

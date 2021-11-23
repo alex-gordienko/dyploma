@@ -1,6 +1,7 @@
 declare namespace api.models {
-  type IAvailableCountriesActions = "Get Countries";
-
+  type IAvailableCountriesActions =
+    | 'Get Countries';
+  
   interface ICountriesAndCities {
     country: Array<{
       id: number;

@@ -2,12 +2,11 @@ import { Connection } from 'mysql2';
 import { RowDataPacket } from 'mysql2/promise';
 import { parseData, toApiSearchedUser } from './utils';
 import fs from 'fs';
-class User {
+class UserGetter {
     protected userID: number;
     protected username: string;
     protected identificator: string;
     protected dbConnector: Connection;
-    private userAvatarDirectory = '/srv/windows/dyploma/Photoes/All';
 
     constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
@@ -103,90 +102,13 @@ class User {
                         else {
                             reject({
                                 status: 'Not Found',
-                                operation: 'Client Login Request',
+                                operation: 'Client Login Response',
                                  data: {
                                     requestFor: 'Client Login Request',
                                     response: 'Not Found'
                                 }
                             });
                         }
-                    }
-                })
-        })
-    }
-
-    public async editUser (
-        userId: number,
-        request: api.models.IUser
-    ): Promise<socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>> {
-
-
-        let updateUserQuery = `UPDATE Users SET `;
-
-        return new Promise(async (
-            resolve: (value: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>) => void,
-            reject: (reason: socket.ISocketErrorResponse<api.models.IAvailableUserActions>) => void
-        ) => {
-            const rawUser = await this.getUser(userId);
-
-            if (!rawUser) {
-                 reject({
-                    status: 'Not Found',
-                    operation: 'User Editor Response',
-                        data: {
-                        requestFor: 'Edit User',
-                        response: 'Not Found'
-                    }
-                 });
-                return null
-            }
-
-            if (request.username !== rawUser.username) updateUserQuery += `username = '${request.username}',`;
-            if (request.FirstName !== rawUser.FirstName) updateUserQuery += ` FirstName = '${request.FirstName}',`;
-            if (request.LastName !== rawUser.LastName) updateUserQuery += `LastName = '${request.LastName}',`;
-            if (request.Status !== rawUser.Status) updateUserQuery += ` Status = '${request.Status}',`;
-            if (request.Country !== rawUser.Country) updateUserQuery += ` Country = '${request.Country}',`;
-            if (request.City !== rawUser.City) updateUserQuery += ` City = '${request.City}',`;
-            if (request.email !== rawUser.email) updateUserQuery += ` email = '${request.email}',`;
-            if (request.phone !== rawUser.phone) updateUserQuery += ` phone = '${request.phone}',`;
-            if (request.password !== rawUser.password) updateUserQuery += ` crypt_pass = '${request.password}',`;
-            if (request.avatar !== rawUser.avatar) {
-                const newAvatar = request.avatar.replace(/^data:([A-Za-z-+\/]+);base64,/, '');
-                if (!fs.existsSync(this.userAvatarDirectory)) {
-                    fs.mkdirSync(this.userAvatarDirectory);
-                }
-                if (!fs.existsSync(`${this.userAvatarDirectory}/${rawUser.idUsers}`)) {
-                    fs.mkdirSync(`${this.userAvatarDirectory}/${rawUser.idUsers}`);
-                }
-                fs.writeFileSync(`${this.userAvatarDirectory}/${rawUser.idUsers}/avatar.jpg`, newAvatar, 'base64');
-                updateUserQuery += ` avatar = '${request.avatar}',`;
-            };
-
-            updateUserQuery += ` idUsers = ${userId} WHERE idUsers=${userId}`;
-
-            this.dbConnector.query(updateUserQuery,
-                async (err, userData) => {
-                    if(err) {
-                        // Если ошибка подключения к бд
-                        reject({
-                            status: 'SQL Error',
-                            operation: 'User Editor Response',
-                             data: {
-                                requestFor: 'Edit User',
-                                response: err.message
-                            }
-                        });
-                    }
-                    else{
-                        // Сохраняем в объекте класса айди пользователя для дальнейших манипуляций
-                        resolve({
-                            status: 'OK',
-                            operation: 'User Editor Response',
-                            data: {
-                                requestFor: 'Edit User',
-                                response: rawUser
-                            }
-                        });
                     }
                 })
         })
@@ -256,7 +178,7 @@ class User {
                         // Если ошибка подключения к бд
                         reject({
                             status: 'SQL Error',
-                            operation: 'User Searcher Request',
+                            operation: 'User Searcher Response',
                             data: {
                                 requestFor: 'Search Peoples',
                                 response: err.message
@@ -269,7 +191,7 @@ class User {
                         if (!JSONUsers.length) {
                             reject({
                                 status: 'Not Found',
-                                operation: 'User Searcher Request',
+                                operation: 'User Searcher Response',
                                 data: {
                                     requestFor: 'Search Peoples',
                                     response: 'Not Found'
@@ -364,7 +286,7 @@ class User {
                         // Если ошибка подключения к бд
                         reject({
                             status: 'SQL Error',
-                            operation: 'User Searcher Request',
+                            operation: 'User Searcher Response',
                             data: {
                                 requestFor: 'Search Friends',
                                 response: err.message
@@ -377,7 +299,7 @@ class User {
                         if (!JSONUsers.length) {
                             reject({
                                 status: 'Not Found',
-                                operation: 'User Searcher Request',
+                                operation: 'User Searcher Response',
                                 data: {
                                     requestFor: 'Search Friends',
                                     response: 'Not Found'
@@ -472,7 +394,7 @@ class User {
                         // Если ошибка подключения к бд
                         reject({
                             status: 'SQL Error',
-                            operation: 'User Searcher Request',
+                            operation: 'User Searcher Response',
                             data: {
                                 requestFor: 'Search Invites',
                                 response: err.message
@@ -485,7 +407,7 @@ class User {
                         if (!JSONUsers.length) {
                             reject({
                                 status: 'Not Found',
-                                operation: 'User Searcher Request',
+                                operation: 'User Searcher Response',
                                 data: {
                                     requestFor: 'Search Invites',
                                     response: 'Not Found'
@@ -570,7 +492,7 @@ class User {
                         // Если ошибка подключения к бд
                         reject({
                             status: 'SQL Error',
-                            operation: 'User Searcher Request',
+                            operation: 'User Searcher Response',
                             data: {
                                 requestFor: 'Search Blocked',
                                 response: err.message
@@ -583,7 +505,7 @@ class User {
                         if (!JSONUsers.length) {
                             reject({
                                 status: 'Not Found',
-                                operation: 'User Searcher Request',
+                                operation: 'User Searcher Response',
                                 data: {
                                     requestFor: 'Search Blocked',
                                     response: 'Not Found'
@@ -698,31 +620,7 @@ class User {
                 })
          })
     }
-
-    public async getUser(userId: number): Promise<api.models.IUser> {
-        const rawGetUserQuery =
-            `SELECT idUsers,
-                regDate,
-                isConfirm,
-                isBanned,
-                username,
-                FirstName,
-                LastName,
-                Birthday,
-                Country,
-                City,
-                Status,
-                email,
-                phone,
-                rating,
-                avatar,
-                crypt_pass AS password
-            FROM Users
-            WHERE idUsers=${userId}`;
-        const dbUser = await this.dbConnector.promise().query(rawGetUserQuery);
-        return parseData<api.models.IUser[]>(dbUser[0])[0]
-    }
 }
 
 
-export default User
+export default UserGetter

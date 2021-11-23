@@ -4,7 +4,6 @@ import Header from "./Header";
 import StyledFilters from "./Filters.styled";
 import Filters from "./FilterList/FilterItem.component";
 import { ReactComponent as FilterIcon } from "../../../assets/icons/filter.svg";
-import { ICountriesAndCities, IFilterProperties } from "../../../App.types";
 
 interface IFilterComponentProps {
   contries: { id: number; name_en: string }[];

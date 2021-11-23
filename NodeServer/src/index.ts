@@ -23,6 +23,22 @@ export const connectDB = async(): Promise<mysql.Connection | null> => {
     }
 }
 
+export const connectCountriesDB = async(): Promise<mysql.Connection | null> => {
+    try{
+        const con = await mysql.createConnection({
+            host: 'localhost',
+            user: 'alexoid1999',
+            password: '18ebyhwb',
+            database: 'ContryCity'
+        });
+        con.connect();
+        return con;
+    } catch (err: any) {
+        console.error(err.message);
+        return null;
+    }
+}
+
 export const closeConnectionDB = (connection: mysql.Connection) => {
     return connection.end()
 }

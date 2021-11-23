@@ -1,12 +1,14 @@
 // import ChatRoute from './ChatRoute';
-import User from './DataParserScripts/userGetter';
+import UserGetter from './DataParserScripts/userGetter';
+import UserSetter from './DataParserScripts/userSetter';
 import PostGetter from './DataParserScripts/postGetter';
 import PostSetter from './DataParserScripts/postSetter';
+import CountriesGetter from './DataParserScripts/countriesGetter';
 import { Connection } from 'mysql2';
 import http from 'http';
 import https from 'https';
 import { Server, Socket } from 'socket.io';
-import { connectDB } from '..';
+import { connectDB, connectCountriesDB } from '..';
 
 const isConnectedToDb = (con: any): con is Connection =>
     con.config !== undefined;
@@ -29,6 +31,7 @@ const Home = (server: https.Server | http.Server) => {
         console.log('\n\x1b[0m New connection');
         // Для каждого сокета создаётся экземпляр коннектора БД, пользователя и парсера
         const con = await connectDB();
+        const countriesCon = await connectCountriesDB();
 
         if (!con) {
             socket.emit('Client Login Response',
@@ -42,10 +45,12 @@ const Home = (server: https.Server | http.Server) => {
             socket.disconnect();
         }
 
-        if (isConnectedToDb(con)) {
-            const user = new User(con);
-            const postGetter = new PostGetter(con, socket);
-            const postSetter = new PostSetter(con, socket);
+        if (isConnectedToDb(con) && isConnectedToDb(countriesCon)) {
+            const countryCity = new CountriesGetter(countriesCon);
+            const userGetter = new UserGetter(con);
+            const userSetter = new UserSetter(con);
+            const postGetter = new PostGetter(con);
+            const postSetter = new PostSetter(con);
             //
             //  формат входящих сообщений от клиента:
             //  socket.on(<Название события реквеста>, msg:{operation: <название операции>, data: <JSON с необходимыми данными>}))
@@ -57,23 +62,56 @@ const Home = (server: https.Server | http.Server) => {
             // Подключаем кусок обработчиков для чата
             // ChatRoute(socket, con);
 
-            // Обработчик запросов для авторизации
+            socket.on<socket.AvailableRequestRoutes>('Get Countries Request',
+                async (msg: socket.ISocketRequest<{}, api.models.IAvailableCountriesActions>) => {
+                    switch (msg.data.requestFor) {
+                        case 'Get Countries': {
+                            countryCity.getCountriesAndCities()
+                                .then(resolved => {
+                                    console.log(`\t\x1b[32m Successful parsing countries...`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'Get Countries Response',
+                                        resolved
+                                    );
+                                })
+                                .catch(rejected => {
+                                    console.log(`\t\x1b[31m Client connection Error: \n\t${rejected}`);
+                                    socket.emit<socket.AvailableResponseRoutes>(
+                                        'Get Countries Response',
+                                        rejected
+                                    );
+                                });
+                            break;
+                        }
+                        default: {
+                            console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`)
+                            socket.emit<socket.AvailableResponseRoutes>(
+                                'Get Countries Response',
+                                {
+                                    operation: msg.operation,
+                                    status: 'Unknown operation',
+                                    data: msg.data
+                                })
+                        }
+                    }
+            })
+
             socket.on<socket.AvailableRequestRoutes>('Client Login Request',
                 async (msg: socket.ISocketRequest<api.models.ILoginRequest, api.models.IAvailableUserActions>) => {
                     if (msg.data.options.login && msg.data.options.login !== '') {
                         console.log(`\x1b[33m Client ${msg.data.options.login} is connecting...`);
                         socket.join(msg.token);
                         try {
-                            user.Login(msg.data.options)
+                            userGetter.Login(msg.data.options)
                                 .then((result: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions>) => {
                                     console.log(`\t\x1b[32m Client ${msg.data.options.login} with token ${msg.token} is connected succesfully`);
                                     socket.emit<socket.AvailableResponseRoutes>(
                                         'Client Login Response',
                                         result
                                     );
-                                    user.id = result.data.response.idUsers;
-                                    user.name = result.data.response.username;
-                                    user.token = msg.token;
+                                    userGetter.id = result.data.response.idUsers;
+                                    userGetter.name = result.data.response.username;
+                                    userGetter.token = msg.token;
                                 })
                                 .catch((rejected) => {
                                     console.log(`\t\x1b[31m Client ${msg.data.options.login} connection Error: \n\t${rejected}`);
@@ -99,30 +137,71 @@ const Home = (server: https.Server | http.Server) => {
 
             socket.on<socket.AvailableRequestRoutes>('User Editor Request',
                 async (msg: socket.ISocketRequest<api.models.IUser, api.models.IAvailableUserActions>) => {
-                    switch (msg.data.requestFor) {
-                        case 'Edit User': {
-                            console.log(`\n\x1b[33m User ${user.name} want's to change info about himself`);
-                            user.editUser(user.id, msg.data.options)
-                                .then(resolve => {
-                                    return user.getUser(resolve.data.response.idUsers)
-                                })
-                                .then(updatedUserData => {
-                                    const response: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions> = {
-                                        operation: 'User Editor Response',
-                                        status: 'OK',
-                                        data: {
-                                            requestFor: 'Edit User',
-                                            response: updatedUserData
+                    try {
+                        switch (msg.data.requestFor) {
+                            case 'Create User': {
+                                console.log(`\n\x1b[33m User ${msg.data.options.username} registration`);
+                                userSetter.createUser(msg.data.options)
+                                    .then(resolved => {
+                                        console.log(`\t\x1b[32m Successful registered...`);
+                                        socket.emit<socket.AvailableResponseRoutes>(
+                                            'User Editor Response', resolved
+                                        )
+                                    })
+                                    .catch(error => {
+                                        socket.emit<socket.AvailableResponseRoutes>(
+                                            'User Editor Response', error)
+                                    });
+                                break;
+                            }
+                            case 'Edit User': {
+                                console.log(`\n\x1b[33m User ${userGetter.name} want's to change info about himself`);
+                                userSetter.editUser(userGetter.id, msg.data.options)
+                                    .then(resolve => {
+                                        return userSetter.getUser(resolve.data.response.idUsers)
+                                    })
+                                    .then(updatedUserData => {
+                                        const response: socket.ISocketResponse<api.models.IUser, api.models.IAvailableUserActions> = {
+                                            operation: 'User Editor Response',
+                                            status: 'OK',
+                                            data: {
+                                                requestFor: 'Edit User',
+                                                response: updatedUserData!
+                                            }
                                         }
-                                    }
-                                    socket.emit<socket.AvailableResponseRoutes>(
-                                        'User Editor Response', response
-                                    )
-                                }).catch(rejected => {
-                                    socket.emit<socket.AvailableResponseRoutes>(
-                                        'User Editor Response', rejected)
-                                })
+                                        socket.emit<socket.AvailableResponseRoutes>(
+                                            'User Editor Response', response
+                                        )
+                                    }).catch(rejected => {
+                                        console.log(`\t\x1b[31m User Creating Error: \n\t${rejected}`);
+                                        socket.emit<socket.AvailableResponseRoutes>(
+                                            'User Editor Response', rejected)
+                                    });
+                                break;
+                            }
+                            default: {
+                                console.log(`\x1b[0m Unknown operation \x1b[31m '${msg.operation}'`)
+                                socket.emit<socket.AvailableResponseRoutes>(
+                                    'User Editor Response',
+                                    {
+                                        operation: msg.operation,
+                                        status: 'Unknown operation',
+                                        data: msg.data
+                                    })
+                            }
                         }
+                    }
+                    catch (e) {
+                        console.log(`\t\x1b[31m Client ${msg.data.options.username} connection Error: \n\t${e}`);
+                        socket.emit<socket.AvailableResponseRoutes>(
+                            'User Editor Response',
+                            {
+                                status: 'Server Error',
+                                data: {
+                                    requestFor: msg.data.requestFor,
+                                    response: e
+                                }
+                            })
                     }
             })
 
@@ -133,7 +212,7 @@ const Home = (server: https.Server | http.Server) => {
                         // Получить 4 поста, начиная с n-го (пагинация) и отправить
                         case 'get all posts': {
                             try {
-                                console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get posts`);
+                                console.log(`\n\x1b[33m User ${userGetter.name} with ID=${userGetter.id} is trying to get posts`);
                                 console.log(`\tHe already have ${msg.data.options.postIDs.length} posts`);
                                 // Получаем посты
                                 postGetter.getAllPosts(msg.operation, msg.data.options.postIDs)
@@ -141,12 +220,12 @@ const Home = (server: https.Server | http.Server) => {
                                         // Затем для каждого получаем лайки
                                         console.log(`\t\x1b[32m Server is look for ${postsPattern.length} posts`);
                                         console.log(`\t\t\x1b[33m Gettin likes to posts ${postsPattern.map((post: data.IPost) => post.idPost)}`)
-                                        return Promise.all(postsPattern.map((post: any) => postGetter.getLikes(post, user)))
+                                        return Promise.all(postsPattern.map((post: any) => postGetter.getLikes(post, userGetter)))
                                     })
                                     .then(postsWithLikes => {
                                         // Затем для каждого получаем дизлайки
                                         console.log(`\t\t\x1b[33m Gettin dislikes to posts ${postsWithLikes.map(post => post.idPost)}`)
-                                        return Promise.all(postsWithLikes.map(post => postGetter.getDisLikes(post, user)))
+                                        return Promise.all(postsWithLikes.map(post => postGetter.getDisLikes(post, userGetter)))
                                     })
                                     .then(postsWithFullRating => {
                                         // Затем для каждого получаем фотографии
@@ -186,7 +265,7 @@ const Home = (server: https.Server | http.Server) => {
                         // Получить 4 публичных поста конкретного пользователя, начиная с n-го (пагинация) и отправить
                         case 'get user public posts': {
                             try {
-                                console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get ${msg.data.options.username}'s posts`);
+                                console.log(`\n\x1b[33m User ${userGetter.name} with ID=${userGetter.id} is trying to get ${msg.data.options.username}'s posts`);
                                 console.log(`\tHe already have ${msg.data.options.postIDs.length} posts`);
                                 // Получаем посты
                                 postGetter.getUserPublicPosts(msg.operation, msg.data.options.username, msg.data.options.postIDs)
@@ -194,12 +273,12 @@ const Home = (server: https.Server | http.Server) => {
                                         // Затем для каждого получаем лайки
                                         console.log(`\t\x1b[32m Server is look for ${postsPattern.length} posts`);
                                         console.log(`\t\t\x1b[33m Gettin likes to posts ${postsPattern.map((post: { idPost: any; }) => post.idPost)}`)
-                                        return Promise.all(postsPattern.map((post: any) => postGetter.getLikes(post, user)))
+                                        return Promise.all(postsPattern.map((post: any) => postGetter.getLikes(post, userGetter)))
                                     })
                                     .then(postsWithLikes => {
                                         // Затем для каждого получаем дизлайки
                                         console.log(`\t\t\x1b[33m Gettin dislikes to posts ${postsWithLikes.map(post => post.idPost)}`)
-                                        return Promise.all(postsWithLikes.map(post => postGetter.getDisLikes(post, user)))
+                                        return Promise.all(postsWithLikes.map(post => postGetter.getDisLikes(post, userGetter)))
                                     })
                                     .then(postsWithFullRating => {
                                         // Затем для каждого получаем фотографии
@@ -240,8 +319,8 @@ const Home = (server: https.Server | http.Server) => {
                         // Получить 4 приватных поста конкретного пользователя, начиная с n-го (пагинация) и отправить
                         case 'get user private posts': {
                             try {
-                                console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get ${msg.data.options.username}'s private posts`);
-                                if (user.id !== msg.data.options.currentUser || user.name !== msg.data.options.username) {
+                                console.log(`\n\x1b[33m User ${userGetter.name} with ID=${userGetter.id} is trying to get ${msg.data.options.username}'s private posts`);
+                                if (userGetter.id !== msg.data.options.currentUser || userGetter.name !== msg.data.options.username) {
                                     console.log(`\x1b[0m Request Denied \x1b[31m '${msg.operation}'`)
                                 }
                                 else {
@@ -252,12 +331,12 @@ const Home = (server: https.Server | http.Server) => {
                                             // Затем для каждого получаем лайки
                                             console.log(`\t\x1b[32m Server is look for ${postsPattern.length} posts`);
                                             console.log(`\t\t\x1b[33m Gettin likes to posts ${postsPattern.map((post: { idPost: any; }) => post.idPost)}`)
-                                            return Promise.all(postsPattern.map((post: any) => postGetter.getLikes(post, user)))
+                                            return Promise.all(postsPattern.map((post: any) => postGetter.getLikes(post, userGetter)))
                                         })
                                         .then(postsWithLikes => {
                                             // Затем для каждого получаем дизлайки
                                             console.log(`\t\t\x1b[33m Gettin dislikes to posts ${postsWithLikes.map(post => post.idPost)}`)
-                                            return Promise.all(postsWithLikes.map(post => postGetter.getDisLikes(post, user)))
+                                            return Promise.all(postsWithLikes.map(post => postGetter.getDisLikes(post, userGetter)))
                                         })
                                         .then(postsWithFullRating => {
                                             // Затем для каждого получаем фотографии
@@ -315,7 +394,7 @@ const Home = (server: https.Server | http.Server) => {
                         // Получить комментарии и отправить
                         case 'get comments': {
                             try {
-                                console.log(`\n\x1b[33m User ${user.name} is trying to get comments to post #${msg.data.options.postIDs[0]}`);
+                                console.log(`\n\x1b[33m User ${userGetter.name} is trying to get comments to post #${msg.data.options.postIDs[0]}`);
                                 postGetter.getComments(msg.data.options.postIDs[0])
                                     .then((resolve) => {
                                         console.log(`\t\x1b[32m Sending comments to post #${msg.data.options.postIDs[0]}...`);
@@ -349,7 +428,7 @@ const Home = (server: https.Server | http.Server) => {
                         case 'create comment': {
                             if (isCreateCommentData(msg.data.options)) {
                                 try {
-                                    console.log(`\n\x1b[33m User ${user.name} is commenting post #${msg.data.options.idPost}`);
+                                    console.log(`\n\x1b[33m User ${userGetter.name} is commenting post #${msg.data.options.idPost}`);
                                     postSetter.createComment(msg.operation, msg.data.options)
                                         .then(resolve => {
                                             if (isCreateCommentData(msg.data.options))
@@ -413,19 +492,19 @@ const Home = (server: https.Server | http.Server) => {
                                 api.models.IGetPostToEditRequest,
                                 api.models.IAvailablePostActions>
                             try {
-                                console.log(`\n\x1b[33m User ${user.name} with ID=${user.id} is trying to get post to edit`);
+                                console.log(`\n\x1b[33m User ${userGetter.name} with ID=${userGetter.id} is trying to get post to edit`);
                                 // Получаем посты
-                                postGetter.getOnePost(msg.operation, typedMessage.data.options.postID, Number(user.id))
+                                postGetter.getOnePost(msg.operation, typedMessage.data.options.postID, Number(userGetter.id))
                                     .then(postPattern => {
                                         console.log(postPattern);
                                         // Затем для каждого получаем лайки
                                         console.log(`\t\t\x1b[33m Gettin likes to post ${postPattern.idPost}`)
-                                        return postGetter.getLikes(postPattern, user)
+                                        return postGetter.getLikes(postPattern, userGetter)
                                     })
                                     .then(postWithLikes => {
                                         // Затем для каждого получаем дизлайки
                                         console.log(`\t\t\x1b[33m Gettin dislikes to post ${postWithLikes.idPost}`)
-                                        return postGetter.getDisLikes(postWithLikes, user)
+                                        return postGetter.getDisLikes(postWithLikes, userGetter)
                                     })
                                     .then(postWithFullRating => {
                                         // Затем для каждого получаем фотографии
@@ -465,7 +544,7 @@ const Home = (server: https.Server | http.Server) => {
                             const typedMessage = msg as socket.ISocketRequest<
                                 api.models.IPost,
                                 api.models.IAvailablePostActions>
-                            console.log(`\n\x1b[33m User ${user.name} is trying to create new post...`);
+                            console.log(`\n\x1b[33m User ${userGetter.name} is trying to create new post...`);
                             postSetter.createPost(typedMessage.operation, typedMessage.data.options)
                                 .then(() => {
                                     console.log(`\t\x1b[32m Successful create post. Gettin ID post...`);
@@ -532,12 +611,12 @@ const Home = (server: https.Server | http.Server) => {
                 ) => {
                     switch (msg.data.requestFor) {
                         case 'set post rating': {
-                            console.log(`\n\x1b[33m User ${user.name} is trying to set ${msg.data.options.setting}...`);
+                            console.log(`\n\x1b[33m User ${userGetter.name} is trying to set ${msg.data.options.setting}...`);
                             postSetter.setPostRating(msg.operation, msg.data.options)
                                 .then(_setRatingResponse => {
                                     return postGetter.getLikes(
                                             { idPost: msg.data.options.idPost },
-                                            user)
+                                            userGetter)
                                 })
                                 .then(postLikes => {
                                     return postGetter.getDisLikes(
@@ -545,7 +624,7 @@ const Home = (server: https.Server | http.Server) => {
                                             idPost: msg.data.options.idPost,
                                             rating: postLikes.rating
                                         },
-                                        user
+                                        userGetter
                                     )
                                 }).then(postRating => {
                                     const response = {
@@ -590,8 +669,8 @@ const Home = (server: https.Server | http.Server) => {
                 ) => {
                     switch (msg.data.requestFor) {
                         case 'Search Peoples': {
-                            console.log(`\n\x1b[33m User ${user.name} is trying to search users...`);
-                            user.searchPeople(msg.data.options, user.id)
+                            console.log(`\n\x1b[33m User ${userGetter.name} is trying to search users...`);
+                            userGetter.searchPeople(msg.data.options, userGetter.id)
                                 .then(result => {
                                     console.log(`\t\x1b[32m Found ${result.data.response.length} results...`);
                                     socket.emit<socket.AvailableResponseRoutes>(
@@ -609,10 +688,10 @@ const Home = (server: https.Server | http.Server) => {
                             break;
                         }
                         case 'Search User': {
-                            console.log(`\n\x1b[33m User ${user.name} is trying to load ${msg.data.options.searchedUser}'s profile...`);
-                            user.loadUserProfile(msg.data.options)
+                            console.log(`\n\x1b[33m User ${userGetter.name} is trying to load ${msg.data.options.searchedUser}'s profile...`);
+                            userGetter.loadUserProfile(msg.data.options)
                                 .then(searchResult => {
-                                    console.log(`\t\x1b[32m Found user. Sending result...`);
+                                    console.log(`\t\x1b[32m Found userGetter. Sending result...`);
                                     socket.emit<socket.AvailableResponseRoutes>(
                                         'User Searcher Response',
                                         searchResult
@@ -628,8 +707,8 @@ const Home = (server: https.Server | http.Server) => {
                             break;
                         }
                         case 'Search Friends': {
-                            console.log(`\n\x1b[33m User ${user.name} is trying to load ${msg.data.options.searchedUser}'s friendList...`);
-                            user.searchFriends(msg.data.options)
+                            console.log(`\n\x1b[33m User ${userGetter.name} is trying to load ${msg.data.options.searchedUser}'s friendList...`);
+                            userGetter.searchFriends(msg.data.options)
                                 .then(searchResult => {
                                     console.log(`\t\x1b[32m Found user. Sending result...`);
                                     socket.emit<socket.AvailableResponseRoutes>(
@@ -647,8 +726,8 @@ const Home = (server: https.Server | http.Server) => {
                             break;
                         }
                         case 'Search Invites': {
-                            console.log(`\n\x1b[33m User ${user.name} is trying to load inviteList...`);
-                            user.searchInvites(msg.data.options, user.id)
+                            console.log(`\n\x1b[33m User ${userGetter.name} is trying to load inviteList...`);
+                            userGetter.searchInvites(msg.data.options, userGetter.id)
                                 .then(searchResult => {
                                     console.log(`\t\x1b[32m Found users. Sending result...`);
                                     socket.emit<socket.AvailableResponseRoutes>(
@@ -666,8 +745,8 @@ const Home = (server: https.Server | http.Server) => {
                             break;
                         }
                         case 'Search Blocked': {
-                           console.log(`\n\x1b[33m User ${user.name} is trying to load blockList...`);
-                            user.searchBlocked(msg.data.options, user.id)
+                           console.log(`\n\x1b[33m User ${userGetter.name} is trying to load blockList...`);
+                            userGetter.searchBlocked(msg.data.options, userGetter.id)
                                 .then(searchResult => {
                                     console.log(`\t\x1b[32m Found users. Sending result...`);
                                     socket.emit<socket.AvailableResponseRoutes>(
@@ -697,7 +776,7 @@ const Home = (server: https.Server | http.Server) => {
                 })
 
             socket.on('disconnect', () => {
-                console.log(`\t\x1b[36m User ${user.name} has been disconnected...`)
+                console.log(`\t\x1b[36m User ${userGetter.name} has been disconnected...`)
                 socket.disconnect();
             })
         }
