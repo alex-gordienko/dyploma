@@ -16,7 +16,7 @@ import {
   Delimeter,
   ButtonBlock
 } from "../../EditorComponents/EditorComponents.styled";
-import { IChat, IFullDataUser, IMessage } from "../../../../App.types";
+import { IFullDataUser } from "../../../../App.types";
 import Input from "../../EditorComponents/Input";
 import TextArea from "../../EditorComponents/TextArea";
 import Modal from "../../Modal";
@@ -26,7 +26,7 @@ import { ReactComponent as Cross } from "../../../../assets/icons/cross.svg";
 interface IChatProps {
   currentUser: IFullDataUser;
   isTyping: { room: string; typing: string[] }[];
-  data: IChat;
+  data: api.models.IChat;
   onTyping: (chatroom: string, username: string) => void;
   onSend: (chatroom: string, textMessage: string) => void;
   onDelete: (
@@ -44,7 +44,7 @@ const Chat = ({
   onSend,
   onDelete
 }: IChatProps) => {
-  const nullMessage: IMessage[] = [];
+  const nullMessage: api.models.IMessage[] = [];
   const [selectedMessages, setSelectedMessages] = useState(nullMessage);
   const [text, setText] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -54,7 +54,7 @@ const Chat = ({
     setSelectedMessages(nullMessage);
   }, [data]);
 
-  const MessageAuthorBlock = (item: IMessage, indx: number) => {
+  const MessageAuthorBlock = (item: api.models.IMessage, indx: number) => {
     let avatar =
       data.members.find(member => member.idUsers === item.id_author)!.avatar !==
       null
@@ -91,7 +91,7 @@ const Chat = ({
     ) : null;
   };
 
-  const MessageDateBlock = (item: IMessage, indx: number) => {
+  const MessageDateBlock = (item: api.models.IMessage, indx: number) => {
     var now = new Date();
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var birth = new Date(item.time);
@@ -169,13 +169,13 @@ const Chat = ({
     setSelectedMessages(prevState => {
       if (prevState.find(searched => searched.id === messageID) === undefined) {
         console.log("That's new message");
-        let newSelected: IMessage[] = prevState.concat(
+        let newSelected: api.models.IMessage[] = prevState.concat(
           data.messages.filter(searched => searched.id === messageID)
         );
         return newSelected;
       } else {
         console.log("Already selected");
-        let newSelected: IMessage[] = prevState.filter(
+        let newSelected: api.models.IMessage[] = prevState.filter(
           searched => searched.id !== messageID
         );
         return newSelected;

@@ -7,12 +7,10 @@ import {
   ILogOutAction,
   IGetPostsAction,
   IAppState,
-  IPhotoBuffer,
   IProfileAction,
   ISetEditedPostAction,
   IGetCountriesAndCitiesAction,
-  IFullDataUser,
-  IPost
+  IFullDataUser
 } from "./App.types";
 
 import { sendToSocket, ServerAdress } from "../src/backend/httpGet";
@@ -49,12 +47,12 @@ const defaultUser: IFullDataUser = {
   username: ""
 };
 
-export const nullPhoto: IPhotoBuffer[] = [
+export const nullPhoto: api.models.IPhotoBuffer[] = [
   { name: "Example1", blob: Photo1 },
   { name: "Example2", blob: Photo2 },
   { name: "Example3", blob: Photo3 }
 ];
-export const nullPost: IPost = {
+export const nullPost: api.models.IPost = {
   Name: "",
   date: "",
   description: "",

@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import Home from './routes/Home';
 import cors from 'cors';
-import mysql from 'mysql2';
+import mysql, { RowDataPacket } from 'mysql2';
 
 export const connectDB = async(): Promise<mysql.Connection | null> => {
     try{
@@ -47,17 +47,43 @@ const app: express.Express = express();
 
 app.use(cors());
 
-app.use(express.static(path.resolve(__dirname, "../Front/build")));
+app.use(express.static(path.resolve(__dirname, "../../Front/build")));
 
-app.all('*',(request, response) => {
-    let filePath = path.resolve(__dirname, "../Front/build/index.html");
-    if(request.url !== "/"){
+app.all('*', async (request, response, next) => {
+    let filePath = path.resolve(__dirname, "../../Front/build/index.html");
+    if (request.url.includes('/confirm')) {
+        try {
+            const { token, user } = request.query;
+            const con = await connectDB();
+
+            const dbUser = await con?.promise().query(`SELECT regToken FROM Users WHERE username='${user}'`);
+            if (dbUser && (dbUser as RowDataPacket[][])[0][0].regToken === token) {
+                await con?.promise().query(`UPDATE Users SET isConfirm=1 WHERE username='${user}'`);
+                console.log(`${user} is success verified`);
+                response.redirect('/login');
+            }
+        } catch (err) {
+            console.error('Confirmation error', { err });
+            response.status(400).json({
+                    operation: 'User Validation',
+                    status: 'Server Error',
+                    data: {
+                        requestFor: 'validate email',
+                        response: err
+                    }
+                });
+        } finally {
+            next();
+        }
+    }
+    if (request.url !== "/") {
         // получаем путь после слеша
         filePath = request.url.substr(1);
         console.log(`Go to ${filePath}`);
     }
     fs.readFile(filePath, (error, data)=>{
-        if(error){
+        if (error) {
+            console.error(error);
             response.statusCode = 404;
             response.end("Resource not found!");
         }

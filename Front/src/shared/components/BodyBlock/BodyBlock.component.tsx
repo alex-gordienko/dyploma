@@ -7,7 +7,7 @@ import PageConstructor from "../../PageConstructor/PageConstructor";
 
 import GoogleMapBlock from "../GoogleMapBlock";
 import Feed from "../Feed";
-import { IPost, IComment, IFullDataUser } from "../../../App.types";
+import { IComment, IFullDataUser } from "../../../App.types";
 import { sendToSocket } from "../../../backend/httpGet";
 import { generateDate } from "../utils/generateData";
 
@@ -34,9 +34,15 @@ const BodyBlock = ({
   onError
 }: IBodyBlockProps) => {
   var nullFilter = { username: "", country: "", city: "", date: "" };
-  const [globalPostsFeed, setGlobalPostsFeed] = useState<IPost[]>([]);
-  const [userPublicPostFeed, setPublicUserPostFeed] = useState<IPost[]>([]);
-  const [userPrivatePostFeed, setPrivateUserPostFeed] = useState<IPost[]>([]);
+  const [globalPostsFeed, setGlobalPostsFeed] = useState<api.models.IPost[]>(
+    []
+  );
+  const [userPublicPostFeed, setPublicUserPostFeed] = useState<
+    api.models.IPost[]
+  >([]);
+  const [userPrivatePostFeed, setPrivateUserPostFeed] = useState<
+    api.models.IPost[]
+  >([]);
   const [onReadyToCallNextPage, setReadyToCallNextPage] = useState(false);
 
   const [selectedPostID, setSelectedPostID] = useState(0);
@@ -49,7 +55,10 @@ const BodyBlock = ({
   socket.on(
     "Get Posts Response",
     (
-      res: socket.ISocketResponse<IPost[], api.models.IAvailablePostActions>
+      res: socket.ISocketResponse<
+        api.models.IPost[],
+        api.models.IAvailablePostActions
+      >
     ) => {
       if (res.data.requestFor === "get all posts") {
         if (res.status === "Server Error" || res.status === "SQL Error") {
@@ -150,7 +159,10 @@ const BodyBlock = ({
   socket.on(
     "Rating Response",
     (
-      res: socket.ISocketResponse<IPost, api.models.IAvailableRatingActions>
+      res: socket.ISocketResponse<
+        api.models.IPost,
+        api.models.IAvailableRatingActions
+      >
     ) => {
       if (res.data.requestFor === "set post rating") {
         if (res.status === "OK") {

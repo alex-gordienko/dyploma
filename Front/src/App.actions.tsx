@@ -8,7 +8,6 @@ import {
   ISetEditedPostAction,
   IProfileAction,
   IFullDataUser,
-  IPost,
   IGetCountriesAndCitiesAction,
   ISearchedUser
 } from "./App.types";
@@ -45,7 +44,7 @@ const getCountriesAndCities = (
 });
 
 const setEditedPost = (
-  searchedPost: IPost | "new" | "No Results Found."
+  searchedPost: api.models.IPost | "new" | "No Results Found."
 ): ISetEditedPostAction => ({
   searchedPost,
   type: "CheckPost"

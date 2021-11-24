@@ -7,12 +7,7 @@ import { SubHeader } from "../EditorComponents/EditorComponents.styled";
 import SubContainer from "../Container/Container.Pages.styled";
 import Label from "./Label";
 import EditorItems from "./EditorElements";
-import {
-  IFullDataUser,
-  INewPost,
-  IPhotoBuffer,
-  IPost
-} from "../../../App.types";
+import { IFullDataUser } from "../../../App.types";
 import { nullPhoto, nullPost } from "../../../App.reducer";
 import { Redirect } from "react-router-dom";
 import Preloader from "../Preloader";
@@ -34,10 +29,11 @@ const PostEditor = ({
   token,
   onError
 }: IPostEditorProps) => {
-  const [newPost, setNewPost] = useState<IPost | null>(nullPost);
-  const [initialPostState, setInitialPostState] = useState<IPost | null>(
-    nullPost
-  );
+  const [newPost, setNewPost] = useState<api.models.IPost | null>(nullPost);
+  const [
+    initialPostState,
+    setInitialPostState
+  ] = useState<api.models.IPost | null>(nullPost);
   const [isDisabled, setIsDisabled] = useState(true);
   const [isReady, setIsReady] = useState(true);
 
@@ -49,15 +45,15 @@ const PostEditor = ({
     "Post Editor Response",
     (
       res: socket.ISocketResponse<
-        IPost | string,
+        api.models.IPost | string,
         api.models.IAvailablePostActions
       >
     ) => {
       socket.removeEventListener("Post Editor Response");
       if (res.data.requestFor === "get one post") {
         if (res.status === "OK") {
-          setNewPost(res.data.response as IPost);
-          setInitialPostState(res.data.response as IPost);
+          setNewPost(res.data.response as api.models.IPost);
+          setInitialPostState(res.data.response as api.models.IPost);
           setIsReady(true);
         }
       }
@@ -73,7 +69,7 @@ const PostEditor = ({
   );
 
   const createPost = () => {
-    sendToSocket<IPost, api.models.IAvailablePostActions>(socket, {
+    sendToSocket<api.models.IPost, api.models.IAvailablePostActions>(socket, {
       data: {
         options: {
           ...newPost,
@@ -92,7 +88,7 @@ const PostEditor = ({
     if (isEqual(newPost, initialPostState)) {
       alert("There is nothing to change");
     } else {
-      sendToSocket<IPost, api.models.IAvailablePostActions>(socket, {
+      sendToSocket<api.models.IPost, api.models.IAvailablePostActions>(socket, {
         data: {
           options: {
             ...newPost,
@@ -167,7 +163,7 @@ const PostEditor = ({
     if (newPost.photoes === nullPhoto) {
       setNewPost({ ...newPost, photoes: [] });
     }
-    const newPhoto: IPhotoBuffer[] = newPost.photoes
+    const newPhoto: api.models.IPhotoBuffer[] = newPost.photoes
       .filter(photo => !nullPhoto.includes(photo))
       .concat({ name, blob: photoUrl });
     setNewPost({ ...newPost, photoes: newPhoto });

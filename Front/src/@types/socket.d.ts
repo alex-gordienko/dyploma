@@ -1,4 +1,19 @@
 declare namespace socket {
+  type AvailableMessengerRequestRoutes =
+    | "Connect to chat page"
+    | "Join room"
+    | "Typing"
+    | "Send message"
+    | "Delete message";
+
+  type AvailableMessengerResponseRoutes =
+    | "onTyping"
+    | "new chat"
+    | "editing chat"
+    | "selected room"
+    | "new message"
+    | "onDeletion";
+
   type AvailableRequestRoutes =
     | "Client Login Request"
     | "Get Posts Request"
@@ -7,7 +22,8 @@ declare namespace socket {
     | "User Editor Request"
     | "User Searcher Request"
     | "Comments Request"
-    | "Rating Request";
+    | "Rating Request"
+    | AvailableMessengerRequestRoutes;
 
   type AvailableResponseRoutes =
     | "Client Login Response"
@@ -17,7 +33,8 @@ declare namespace socket {
     | "User Editor Response"
     | "User Searcher Response"
     | "Comments Response"
-    | "Rating Response";
+    | "Rating Response"
+    | AvailableMessengerResponseRoutes;
 
   type ResponseStatus =
     | "OK"

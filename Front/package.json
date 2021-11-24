@@ -1,7 +1,7 @@
 {
   "name": "eternal_radiance",
   "version": "0.1.0",
-  "homepage": "https://10.15.0.1/",
+  "homepage": "https://10.15.0.96/",
   "private": true,
   "dependencies": {
     "@emotion/core": "^10.0.27",

@@ -33,7 +33,7 @@ import {
   getCountriesAndCities
 } from "./App.actions";
 import CreatePost from "./shared/components/PostEditor";
-import { IFullDataUser, IPost, ISavedUser } from "./App.types";
+import { IFullDataUser, ISavedUser } from "./App.types";
 import { getStateFromStorage } from "./shared/storage/localStorage.actions";
 
 const App = () => {

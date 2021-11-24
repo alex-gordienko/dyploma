@@ -1,7 +1,7 @@
 import { Connection } from 'mysql2';
 import nodemailer from 'nodemailer';
 import { parseData, tokenGen } from './utils';
-import http from 'http';
+import https from 'https';
 import fs from 'fs';
 import Mail from 'nodemailer/lib/mailer';
 
@@ -9,9 +9,17 @@ import Mail from 'nodemailer/lib/mailer';
 class UserSetter {
     protected dbConnector: Connection;
     private userAvatarDirectory = '/srv/windows/dyploma/Photoes/All';
+    private ip = '10.15.0.96:5001';
 
     constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
+        https.get('https://api.ipify.org', (res) => {
+            res.on('data', (body) => {
+                console.log(body);
+                this.ip = Buffer.from(body).toString();
+            })
+        });
+
     }
 
     public async createUser(
@@ -23,7 +31,7 @@ class UserSetter {
         let createUserQuery =
         `INSERT INTO Users
 			(username, regToken, crypt_pass, FirstName, LastName, Country, City, Birthday, `;
-        
+
         if (request.Status) {
             createUserQuery += `Status, `
         }
@@ -33,7 +41,7 @@ class UserSetter {
         if (request.avatar) {
             createUserQuery += `, avatar`;
         }
-        createUserQuery += `) 
+        createUserQuery += `)
         VALUES (
             '${request.username}',
             '${registrationToken}',
@@ -43,7 +51,7 @@ class UserSetter {
             '${request.Country}',
             '${request.City}',
             '${request.Birthday}'`;
-        
+
         if (request.Status) {
             createUserQuery += `, '${request.Status}'`;
         }
@@ -114,7 +122,7 @@ class UserSetter {
                         }
                     }
                 })
-            
+
         })
     }
 
@@ -169,7 +177,7 @@ class UserSetter {
                         return reject({
                             status: 'SQL Error',
                             operation: 'User Editor Response',
-                             data: {
+                            data: {
                                 requestFor: 'Edit User',
                                 response: err.message
                             }
@@ -209,7 +217,7 @@ class UserSetter {
                 avatar,
                 crypt_pass AS password
             FROM Users `;
-            
+
         if (typeof userSearchData === 'number') {
             rawGetUserQuery += `WHERE idUsers=${userSearchData}`;
         }
@@ -234,15 +242,10 @@ class UserSetter {
     }
 
     private async sendVerificationEmail(toEmail: string, toUser: string, token: string): Promise<'OK' | string> {
-        let ip = '10.15.0.96:5001';
-        await http.get('https://api.ipify.org', (res) => {
-            res.on('data',(body)=> ip = body)
-        });
 
-
+        console.log(this.ip);
         const transporter = nodemailer.createTransport({
             service: 'gmail',
-            host: 'smtp.gmail.com',
             auth: {
                 user: 'alexoid1999@gmail.com',
                 pass: 'maypxwvnrxtovkjd',
@@ -255,8 +258,8 @@ class UserSetter {
 				<p>If you see this message, <br/>
 					your e-mail was used to registration in new social network 'Eternal Radiance'
 				</p>
-				<p>If that was really you, please 
-					<a href='http://${ip}/dyploma/userEditor.php?token=${token}&user=${toUser}'>confirm this</a>
+				<p>If that was really you, please
+					<a href='http://${this.ip}/dyploma/userEditor.php?token=${token}&user=${toUser}'>confirm this</a>
 				</p>
 			</div>`;
 
@@ -269,6 +272,8 @@ class UserSetter {
 
         return new Promise((resolve, reject) => {
             transporter.sendMail(emailOptions, (err, info) => {
+                console.log('Error:', err);
+                console.log("Info", info);
                 if (err) {
                     reject(err);
                 }

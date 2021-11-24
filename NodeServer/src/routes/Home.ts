@@ -9,6 +9,7 @@ import http from 'http';
 import https from 'https';
 import { Server, Socket } from 'socket.io';
 import { connectDB, connectCountriesDB } from '..';
+import ChatRoute from './ChatRoute';
 
 const isConnectedToDb = (con: any): con is Connection =>
     con.config !== undefined;
@@ -60,7 +61,7 @@ const Home = (server: https.Server | http.Server) => {
             //
 
             // Подключаем кусок обработчиков для чата
-            // ChatRoute(socket, con);
+            ChatRoute(con, socket, userGetter);
 
             socket.on<socket.AvailableRequestRoutes>('Get Countries Request',
                 async (msg: socket.ISocketRequest<{}, api.models.IAvailableCountriesActions>) => {
@@ -149,6 +150,7 @@ const Home = (server: https.Server | http.Server) => {
                                         )
                                     })
                                     .catch(error => {
+                                        console.log(`\t\x1b[31m Client Error: \n\t${JSON.stringify(error)}`);
                                         socket.emit<socket.AvailableResponseRoutes>(
                                             'User Editor Response', error)
                                     });

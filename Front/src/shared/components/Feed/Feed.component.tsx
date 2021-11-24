@@ -4,12 +4,12 @@ import StyledFeed from "./Feed.styled";
 import Post from "./Post";
 import Preloader from "../Preloader";
 import { FeedList } from "./Feed.constants";
-import { IPost, IComment } from "../../../App.types";
+import { IComment } from "../../../App.types";
 import { ButtonBlock } from "../EditorComponents/EditorComponents.styled";
 
 interface ILowFeedProps {
   type: "Preview";
-  data: IPost[];
+  data: api.models.IPost[];
   currentUser: number;
   onReadyToCallNextPage: boolean;
   onSelect: (value: number) => void;
@@ -20,7 +20,7 @@ interface ILowFeedProps {
 
 interface IFullFeedProps {
   type: "FullPost";
-  data?: IPost;
+  data?: api.models.IPost;
   comments: IComment[];
   currentUser: number;
   onSelect: (value: number) => void;

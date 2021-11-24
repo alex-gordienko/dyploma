@@ -6,13 +6,13 @@ import {
   ButtonBlock
 } from "../../EditorComponents/EditorComponents.styled";
 import ChatPreview from "./ChatPreview";
-import { IPreviewChat, IFullDataUser, IMember } from "../../../../App.types";
+import { IFullDataUser } from "../../../../App.types";
 
 interface IFeedProps {
-  data: IPreviewChat[];
+  data: api.models.IPreviewChat[];
   onSelect: (value: string) => void;
-  onEdit: (chat: IPreviewChat) => void;
-  onDelete: (chat: IPreviewChat) => void;
+  onEdit: (chat: api.models.IPreviewChat) => void;
+  onDelete: (chat: api.models.IPreviewChat) => void;
 }
 
 const Chats = ({ data, onSelect, onEdit, onDelete }: IFeedProps) => {

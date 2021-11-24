@@ -11,13 +11,12 @@ import {
   Online,
   Footer
 } from "./ChatPreview.styled";
-import { IPreviewChat, IMember } from "../../../../../App.types";
 import defaultAvatar from "../../../../../assets/img/DefaultPhoto.jpg";
 import { ReactComponent as MoreIcon } from "../../../../../assets/icons/more.svg";
 import DropDown from "./DropDownList";
 
 interface IChatPreviewProps {
-  item: IPreviewChat;
+  item: api.models.IPreviewChat;
   onEdit: () => void;
   onDelete: () => void;
 }

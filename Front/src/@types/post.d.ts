@@ -38,4 +38,38 @@ declare namespace api.models {
     name: string;
     blob: string;
   }
+
+  interface IPost {
+    description: string;
+    date: string;
+    Name: string;
+    idPost: number;
+    isPrivate: number;
+    position: {
+      lat: number;
+      lng: number;
+    };
+    rating: {
+      likes: number;
+      dislikes: number;
+      isLikedByMe: boolean;
+      isDislikedByMe: boolean;
+    };
+    type: number;
+    username: string;
+    idUser: number;
+    photoes: IPhotoBuffer[];
+  }
+
+  interface INewPost {
+    name: string;
+    isPrivate: boolean;
+    description: string;
+    photoes: IPhotoBuffer[];
+    position: {
+      lat: number;
+      lng: number;
+    };
+    dateTime: string;
+  }
 }

@@ -8,7 +8,7 @@ import SubContainer from "../Container/Container.Pages.styled";
 
 import { StyledEditorBlock } from "./ProfileViewer.styled";
 import { SubHeader } from "../EditorComponents/EditorComponents.styled";
-import { IFullDataUser, ISearchedUser, IPost } from "../../../App.types";
+import { IFullDataUser, ISearchedUser } from "../../../App.types";
 import { Redirect, NavLink } from "react-router-dom";
 import BodyBlock from "../BodyBlock";
 import { sendToSocket } from "../../../backend/httpGet";

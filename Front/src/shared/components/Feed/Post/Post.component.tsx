@@ -18,7 +18,7 @@ import {
 } from "./Post.styled";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { IPost, IPhotoBuffer, IComment } from "../../../../App.types";
+import { IComment } from "../../../../App.types";
 import defaultAvatar from "../../../../assets/img/DefaultPhoto.jpg";
 import Input from "../../EditorComponents/Input";
 import Preloader from "../../Preloader";
@@ -32,7 +32,7 @@ import { ReactComponent as DislikeIcon } from "../../../../assets/icons/dislike.
 
 interface ILowPostProps {
   type: "Preview";
-  item: IPost;
+  item: api.models.IPost;
   isEdit: boolean;
   onClick: (item: number) => void;
   onLike: (post: number, type: "new" | "inversion") => void;
@@ -41,7 +41,7 @@ interface ILowPostProps {
 
 interface IFullPostProps {
   type: "FullPost";
-  item: IPost;
+  item: api.models.IPost;
   comments: IComment[];
   isEdit: boolean;
   onCreateComment: (comment: string) => void;
@@ -115,13 +115,15 @@ const Post = (mode: IPostProps) => {
       <Body>
         <Photoes>
           <Slider {...settings}>
-            {mode.item.photoes.map((photoUrl: IPhotoBuffer, indx: number) => {
-              return (
-                <Photo key={indx}>
-                  <img src={photoUrl.blob} key={indx} alt="Pic is here" />
-                </Photo>
-              );
-            })}
+            {mode.item.photoes.map(
+              (photoUrl: api.models.IPhotoBuffer, indx: number) => {
+                return (
+                  <Photo key={indx}>
+                    <img src={photoUrl.blob} key={indx} alt="Pic is here" />
+                  </Photo>
+                );
+              }
+            )}
           </Slider>
         </Photoes>
         <Rating>
@@ -233,13 +235,15 @@ const Post = (mode: IPostProps) => {
       <Body>
         <Photoes>
           <Slider {...settings}>
-            {mode.item.photoes.map((photoUrl: IPhotoBuffer, indx: number) => {
-              return (
-                <Photo key={indx}>
-                  <img src={photoUrl.blob} key={indx} alt="Pic is here" />
-                </Photo>
-              );
-            })}
+            {mode.item.photoes.map(
+              (photoUrl: api.models.IPhotoBuffer, indx: number) => {
+                return (
+                  <Photo key={indx}>
+                    <img src={photoUrl.blob} key={indx} alt="Pic is here" />
+                  </Photo>
+                );
+              }
+            )}
           </Slider>
         </Photoes>
         <Rating>
