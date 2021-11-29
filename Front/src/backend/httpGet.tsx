@@ -1,7 +1,7 @@
 /* tslint:disable */
 //const adress = "http://10.15.0.9/5001/";
 //const adress = "http://213.231.13.15/dyploma/";
-export const ServerAdress = "http://10.15.0.96:5001";
+export const ServerAdress = "http://10.15.0.91:5001";
 
 export function httpGet(url: string) {
   return new Promise(function(resolve, reject) {

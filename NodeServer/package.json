@@ -4,8 +4,9 @@
   "description": "server-side Node.JS Chat-Server",
   "main": "build/index.js",
   "scripts": {
-    "start": "tsc --build && yarn copy-messengers && node build/index.js",
+    "start": "tsc --build && yarn make-message-dir && yarn copy-messengers && node build/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "make-message-dir": "mkdir -p /srv/windows/dyploma/NodeServer/build/messages/",
     "copy-messengers": "cp -a /srv/windows/dyploma/NodeServer/src/messages/. /srv/windows/dyploma/NodeServer/build/messages/"
   },
   "author": "alexoid1999",

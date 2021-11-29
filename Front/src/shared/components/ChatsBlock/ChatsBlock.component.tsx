@@ -17,7 +17,11 @@ interface IChatsFeedProps {
   socket: SocketIOClient.Socket;
   onError: (errorMessage: string) => void;
 }
-const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
+const ChatsFeed: React.FC<IChatsFeedProps> = ({
+  currentUser,
+  socket,
+  onError
+}: IChatsFeedProps) => {
   const tokenGen = (length: number) => {
     var rnd = "";
     while (rnd.length < length)
@@ -66,34 +70,33 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
   const [members, setMembers] = useState(nullMembers);
   const [isDisabled, setIsDisabled] = useState(false);
 
-  socket.on(
-    "User Searcher Response",
-    (
-      res: socket.ISocketResponse<
-        ISearchedUser[],
-        api.models.IAvailableUserActions
-      >
-    ) => {
-      socket.removeEventListener("User Searcher Response");
-      if (res.data.requestFor === "Search Peoples") {
-        if (res.status === "OK") {
-          let users: ISearchedUser[] = res.data.response;
-          let chatMembers: api.models.IMember[] = users.map(user => {
-            return {
-              idUsers: user.idUsers,
-              username: user.username,
-              rating: user.rating,
-              avatar: user.avatar
-            };
-          });
-          setShowModal(true);
-          setMembers(prevState =>
-            uniqBy([...prevState, ...chatMembers], "idUsers")
-          );
+  useEffect(() => {
+    sendToSocket<{ user: string }, socket.AvailableMessengerRequestRoutes>(
+      socket,
+      {
+        operation: "Connect To Chat Page Request",
+        token,
+        data: {
+          requestFor: "Connect To Chat Page Request",
+          options: {
+            user: currentUser.username
+          }
         }
       }
-    }
-  );
+    );
+  }, [1]);
+
+  useEffect(() => {
+    return () => {
+      socket.removeEventListener("Connect To Chat Page Response");
+      socket.removeEventListener("Chat Typing Response");
+      socket.removeEventListener("Create Chat Response");
+      socket.removeEventListener("Edit Chat Response");
+      socket.removeEventListener("Join Room Response");
+      socket.removeEventListener("Send Message Response");
+      socket.removeEventListener("Delete Message Response");
+    };
+  }, [socket]);
 
   const searchPeople = (
     filter = nullFilter,
@@ -118,38 +121,18 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
     });
   };
 
-  const saveChanges = (
-    command: "create chat" | "edit chat" | "delete chat",
-    chat: api.models.IPreviewChat
-  ) => {
-    let newChat: any = chat;
-    let currentMember: api.models.IMember = {
-      idUsers: currentUser.idUsers,
-      username: currentUser.username,
-      rating: currentUser.rating,
-      avatar: currentUser.avatar
-    };
-    if (
-      !newChat.members.find(
-        (member: api.models.IMember) => member.idUsers === currentMember.idUsers
-      )
-    )
-      newChat.members.push(currentMember);
-    if (chat.avatar === defaultAvatar) newChat.avatar = null;
-    if (newChat.type === "private") newChat.name = tokenGen(12);
-    console.log(newChat);
-    socket.emit(command, { user: currentUser.username, newChat: newChat });
-  };
-
-  const getChats = async (
+  const setChatFeed = async (
     res: socket.ISocketResponse<
       api.models.IPreviewChat,
       socket.AvailableMessengerResponseRoutes
     >
   ) => {
     console.log(res);
-    socket.removeEventListener("new chat");
-    if (res.operation === "new chat" && res.status === "OK") {
+    socket.removeEventListener("Connect To Chat Page Response");
+    if (
+      res.operation === "Connect To Chat Page Response" &&
+      res.status === "OK"
+    ) {
       setChats(prevState =>
         uniqBy([...prevState, res.data.response], "chatID")
       );
@@ -165,14 +148,66 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
     setSelectedChatToEdit(nullChat[0]);
   };
 
-  const editChatsFeed = async (data: any) => {
-    console.log(data);
-    if (data.chatlist) {
-      setChats(prevState => {
-        let newEditedChat: api.models.IPreviewChat = data.chatlist;
-        let newChats = prevState.map(chat => {
-          if (chat.chatID === newEditedChat.chatID) return newEditedChat;
-          else return chat;
+  const saveChanges = (
+    command:
+      | "Create Chat Request"
+      | "Edit Chat Request"
+      | "Delete Chat Request",
+    chat: api.models.IPreviewChat
+  ) => {
+    let newChat: api.models.IPreviewChat = chat;
+    let currentMember: api.models.IMember = {
+      idUsers: currentUser.idUsers,
+      username: currentUser.username,
+      rating: currentUser.rating,
+      avatar: currentUser.avatar
+    };
+    if (
+      !newChat.members.find(
+        (member: api.models.IMember) => member.idUsers === currentMember.idUsers
+      )
+    ) {
+      newChat.members.push(currentMember);
+    }
+    if (chat.avatar === defaultAvatar) {
+      newChat.avatar = null;
+    }
+    if (newChat.type === "private") {
+      newChat.name = tokenGen(12);
+    }
+    console.log(newChat, command);
+    sendToSocket<
+      api.models.IPreviewChat,
+      socket.AvailableMessengerRequestRoutes
+    >(socket, {
+      operation: command,
+      token,
+      data: {
+        requestFor: command,
+        options: newChat
+      }
+    });
+  };
+
+  const getChats = async (
+    res: socket.ISocketResponse<
+      api.models.IPreviewChat,
+      socket.AvailableMessengerResponseRoutes
+    >
+  ) => {
+    console.log(res);
+    socket.removeEventListener("Create Chat Response");
+    if (
+      res.operation === "Connect To Chat Page Response" &&
+      res.status === "OK"
+    ) {
+      setChats(prevState =>
+        uniqBy([...prevState, res.data.response], "chatID")
+      );
+      setIsTyping(prevState => {
+        let newChats = prevState.concat({
+          room: res.data.response.chatID.toString(),
+          typing: [""]
         });
         return newChats;
       });
@@ -180,41 +215,78 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
     setShowModal(false);
     setSelectedChatToEdit(nullChat[0]);
   };
-  const joinRoom = (data: any) => {
-    console.log(data);
-    if (data.chatMessages) {
-      setRoom(prevState => {
-        return {
-          chatID: prevState.chatID,
-          name: prevState.name,
-          avatar: prevState.avatar,
-          type: prevState.type,
-          members: prevState.members,
-          messages: data.chatMessages
-        };
+
+  const editChatsFeed = async (
+    res: socket.ISocketResponse<
+      api.models.IPreviewChat,
+      socket.AvailableMessengerResponseRoutes
+    >
+  ) => {
+    console.log(res);
+    socket.removeEventListener("Edit Chat Response");
+    if (res.operation === "Edit Chat Response" && res.status === "OK") {
+      setChats(prevState => {
+        return prevState.map(chat => {
+          if (chat.chatID === res.data.response.chatID)
+            return res.data.response;
+          else return chat;
+        });
       });
     }
+    setShowModal(false);
+    setSelectedChatToEdit(nullChat[0]);
   };
 
-  const isType = (data: any) => {
-    setIsTyping(prevState => {
-      let newState = prevState.map(elem => {
-        if (elem.room === data.room && !elem.typing.includes(data.typing)) {
-          return { room: elem.room, typing: elem.typing.concat(data.typing) };
-        } else return { room: elem.room, typing: elem.typing };
+  const joinRoom = useCallback(
+    async (
+      res: socket.ISocketResponse<
+        api.models.IMessage[],
+        socket.AvailableMessengerResponseRoutes
+      >
+    ) => {
+      console.log(res);
+      socket.removeEventListener("Join Room Response");
+      if (res.data.requestFor === "Join Room Response" && res.status === "OK") {
+        setRoom(prevState => ({ ...prevState, messages: res.data.response }));
+      }
+    },
+    [room]
+  );
+
+  const isType = async (
+    res: socket.ISocketResponse<
+      { chatroom: string; username: string },
+      socket.AvailableMessengerResponseRoutes
+    >
+  ) => {
+    socket.removeEventListener("Chat Typing Response");
+    if (res.operation === "Chat Typing Response" && res.status === "OK") {
+      setIsTyping(prevState => {
+        return prevState.map(elem => {
+          if (
+            elem.room === res.data.response.chatroom &&
+            !elem.typing.includes(res.data.response.username)
+          ) {
+            return {
+              room: elem.room,
+              typing: elem.typing.concat(res.data.response.username)
+            };
+          } else return { room: elem.room, typing: elem.typing };
+        });
       });
       setTimeout(() => {
         setIsTyping(prevState => {
-          let newState = prevState.map(e => {
-            if (e.room === data.room && e.typing.includes(data.typing)) {
+          return prevState.map(e => {
+            if (
+              e.room === res.data.response.chatroom &&
+              e.typing.includes(res.data.response.username)
+            ) {
               return { room: e.room, typing: [""] };
             } else return { room: e.room, typing: e.typing };
           });
-          return newState;
         });
-      }, 4000);
-      return newState;
-    });
+      }, 2000);
+    }
   };
 
   const updateMessageFeed = (data: any) => {
@@ -264,29 +336,6 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
     });
   };
 
-  socket.on("onTyping", isType);
-  socket.on("new chat", getChats);
-  socket.on("editing chat", editChatsFeed);
-  socket.on("selected room", joinRoom);
-  socket.on("new message", updateMessageFeed);
-  socket.on("onDeletion", onDeleteMessage);
-
-  const connectToChatServer = () => {
-    sendToSocket<{ user: string }, socket.AvailableMessengerRequestRoutes>(
-      socket,
-      {
-        operation: "Connect to chat page",
-        token,
-        data: {
-          requestFor: "Connect to chat page",
-          options: {
-            user: currentUser.username
-          }
-        }
-      }
-    );
-  };
-
   const selectChatRoom = (chatroom: string) => {
     setRoom(prevState => {
       return {
@@ -306,10 +355,10 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
       api.models.IJoinRoomRequest,
       socket.AvailableMessengerRequestRoutes
     >(socket, {
-      operation: "Join room",
+      operation: "Join Room Request",
       token,
       data: {
-        requestFor: "Join room",
+        requestFor: "Join Room Request",
         options: {
           user: currentUser.username,
           chatroom: chatroom
@@ -318,20 +367,15 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
     });
   };
 
-  useEffect(() => {
-    connectToChatServer();
-  }, [1]);
-
-  const onTyping = (chatroom: string, username: string) => {
-    console.log("Chat " + chatroom + ", command: typing, data: " + username);
+  const onTyping = (chatroom: string) => {
     sendToSocket<
       api.models.IJoinRoomRequest,
       socket.AvailableMessengerRequestRoutes
     >(socket, {
-      operation: "Typing",
+      operation: "Chat Typing Request",
       token,
       data: {
-        requestFor: "Typing",
+        requestFor: "Chat Typing Request",
         options: {
           user: currentUser.username,
           chatroom: chatroom
@@ -383,6 +427,43 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
       type: "text"
     });
   };
+
+  socket.once("Connect To Chat Page Response", setChatFeed);
+  socket.on("Chat Typing Response", isType);
+  socket.on("Create Chat Response", getChats);
+  socket.on("Edit Chat Response", editChatsFeed);
+  socket.once("Join Room Response", joinRoom);
+  socket.on("Send Message Response", updateMessageFeed);
+  socket.on("Delete Message Response", onDeleteMessage);
+
+  socket.on(
+    "User Searcher Response",
+    (
+      res: socket.ISocketResponse<
+        ISearchedUser[],
+        api.models.IAvailableUserActions
+      >
+    ) => {
+      socket.removeEventListener("User Searcher Response");
+      if (res.data.requestFor === "Search Peoples") {
+        if (res.status === "OK") {
+          let users: ISearchedUser[] = res.data.response;
+          let chatMembers: api.models.IMember[] = users.map(user => {
+            return {
+              idUsers: user.idUsers,
+              username: user.username,
+              rating: user.rating,
+              avatar: user.avatar
+            };
+          });
+          setShowModal(true);
+          setMembers(prevState =>
+            uniqBy([...prevState, ...chatMembers], "idUsers")
+          );
+        }
+      }
+    }
+  );
 
   return (
     <Container>
@@ -438,7 +519,9 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
           isDisabledToApply={e => setIsDisabled(e)}
           saveUserChanges={e =>
             saveChanges(
-              selectedChatToEdit.chatID !== "0" ? "edit chat" : "create chat",
+              selectedChatToEdit.chatID !== "0"
+                ? "Edit Chat Request"
+                : "Create Chat Request",
               e
             )
           }

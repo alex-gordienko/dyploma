@@ -1,18 +1,22 @@
 declare namespace socket {
   type AvailableMessengerRequestRoutes =
-    | "Connect to chat page"
-    | "Join room"
-    | "Typing"
-    | "Send message"
-    | "Delete message";
+    | "Connect To Chat Page Request"
+    | "Join Room Request"
+    | "Chat Typing Request"
+    | "Send Message Request"
+    | "Delete Message Request"
+    | "Create Chat Request"
+    | "Edit Chat Request"
+    | "Delete Chat Request";
 
   type AvailableMessengerResponseRoutes =
-    | "onTyping"
-    | "new chat"
-    | "editing chat"
-    | "selected room"
-    | "new message"
-    | "onDeletion";
+    | "Connect To Chat Page Response"
+    | "Chat Typing Response"
+    | "Create Chat Response"
+    | "Edit Chat Response"
+    | "Join Room Response"
+    | "Send Message Response"
+    | "Delete Message Response";
 
   type AvailableRequestRoutes =
     | "Client Login Request"

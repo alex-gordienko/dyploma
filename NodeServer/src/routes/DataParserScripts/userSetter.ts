@@ -13,12 +13,16 @@ class UserSetter {
 
     constructor(dbConnector: Connection){
         this.dbConnector = dbConnector;
-        https.get('https://api.ipify.org', (res) => {
-            res.on('data', (body) => {
-                console.log(body);
-                this.ip = Buffer.from(body).toString();
-            })
-        });
+        try {
+            https.get('https://api.ipify.org', (res) => {
+                res.on('data', (body) => {
+                    this.ip = Buffer.from(body).toString();
+                })
+            });
+        } catch (err) {
+            console.error('Error when connecting to ip-api', err);
+            this.ip = '10.15.0.91:5001'
+        }
 
     }
 

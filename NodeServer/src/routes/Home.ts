@@ -35,6 +35,7 @@ const Home = (server: https.Server | http.Server) => {
         const countriesCon = await connectCountriesDB();
 
         if (!con) {
+            console.error('Error connection to db');
             socket.emit('Client Login Response',
                 {
                     status: 'Server Error',

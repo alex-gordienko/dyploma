@@ -168,7 +168,7 @@ const Chat = ({
   const selectMessage = (messageID: number) => {
     setSelectedMessages(prevState => {
       if (prevState.find(searched => searched.id === messageID) === undefined) {
-        console.log("That's new message");
+        console.log("That's Send Message Response");
         let newSelected: api.models.IMessage[] = prevState.concat(
           data.messages.filter(searched => searched.id === messageID)
         );
