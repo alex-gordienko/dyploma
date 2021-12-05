@@ -5,7 +5,7 @@ import { Connection } from 'mysql2';
 import RowDataPacket from 'mysql2/typings/mysql/lib/protocol/packets/RowDataPacket';
 import { Socket } from 'socket.io';
 import UserGetter from './DataParserScripts/userGetter';
-import { parseData } from './DataParserScripts/utils';
+import { generateDate, parseData } from './DataParserScripts/utils';
 
 const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
     const chatsRoute = path.resolve(__dirname, '../messages');
@@ -186,33 +186,47 @@ const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
             console.log('New joining room');
             // поиск файла с текстом сообщений для выбранного чата
             // если найден - отправляем юзеру. Инече - отправка пустого массива
-            fs.exists(`${chatsRoute}/${msg.data.options.chatroom}.json`, (exists) => {
-                if (exists) {
-                    const rawdata =
-                        JSON.parse(
-                            fs.readFileSync(`${chatsRoute}/${msg.data.options.chatroom}.json`).toString()
-                        ) as api.models.IMessage[];
-                    const response: socket.ISocketResponse<
-                        api.models.IMessage[],
-                        socket.AvailableMessengerResponseRoutes
-                    > = {
-                        operation: 'Join Room Response',
-                        status: 'OK',
-                        data: {
-                            requestFor: 'Join Room Response',
-                            response: rawdata
+            const isChatExists = fs.existsSync(`${chatsRoute}/${msg.data.options.chatroom}.json`)
+            if (isChatExists) {
+                const rawdata =
+                    JSON.parse(
+                        fs.readFileSync(`${chatsRoute}/${msg.data.options.chatroom}.json`).toString()
+                    ) as api.models.IMessage[];
+                const response: socket.ISocketResponse<
+                    api.models.IMessage[],
+                    socket.AvailableMessengerResponseRoutes
+                > = {
+                    operation: 'Join Room Response',
+                    status: 'OK',
+                    data: {
+                        requestFor: 'Join Room Response',
+                        response: rawdata
+                    }
+                };
+                socket.join(msg.data.options.chatroom);
+                socket.emit<socket.AvailableMessengerResponseRoutes>(
+                    'Join Room Response',
+                    response
+                );
+
+                const broadcastJoinMessage: socket.ISocketResponse<
+                    { username: string },
+                    socket.AvailableMessengerResponseRoutes
+                > = {
+                    operation: 'Join Room Response',
+                    status: 'OK',
+                    data: {
+                        requestFor: 'Opponent Join Room Response',
+                        response: {
+                            username: user.name
                         }
-                    };
-                    socket.emit<socket.AvailableMessengerResponseRoutes>(
-                        'Join Room Response',
-                        response
-                    );
-                    socket
-                        .broadcast
-                        .to(msg.data.options.chatroom)
-                        .emit<socket.AvailableMessengerResponseRoutes>('Join Room Response', { 'chatroom': user.name });
-                }
-            })
+                    }
+                };
+                socket
+                    .broadcast
+                    .to(msg.data.options.chatroom)
+                    .emit<socket.AvailableMessengerResponseRoutes>('Join Room Response', broadcastJoinMessage);
+            }
             console.log(user.name + ' connected to room ' + msg.data.options.chatroom);
         });
 
@@ -242,34 +256,55 @@ const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
                 .emit<socket.AvailableMessengerResponseRoutes>('Chat Typing Response', response);
     });
 
-    socket.on<socket.AvailableMessengerRequestRoutes>('Send Message Request', async msg=>{
-        console.log('Send Message Response from '+msg.user+' in room '+msg.room);
-        console.log('content: '+msg.data);
+    socket.on<socket.AvailableMessengerRequestRoutes>('Send Message Request',
+        async (msg: socket.ISocketRequest<
+            api.models.ISendMessageRequest,
+            socket.AvailableMessengerRequestRoutes
+        >) => {
+        console.log('Send Message Response from '+msg.data.options.user+' in room '+msg.data.options.room);
+        console.log('content: '+msg.data.options.data);
         const now = new Date();
-        const today = now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate()+' '+now.getHours()+':'+now.getMinutes()+':'+now.getSeconds();
-        let rawdata = [];
+        const today = generateDate();
+        let rawdata: api.models.IMessage[] = [];
 
-        fs.exists(`${chatsRoute}/${msg.room}.json`, async (exists)=>{
-            if(exists){
-                rawdata = JSON.parse(fs.readFileSync(`${chatsRoute}/${msg.room}.json`) as any);
-                // messenger.lastMessage = rawdata[rawdata.length-1];
-            }
-            else rawdata = [];
-        })
-
-        const newMessage ={
-            id: rawdata.length+1,
-            id_author: msg.id_author,
-            isHiddenFromAuthor: false,
-            message: msg.data,
-            time: today,
-            type: msg.type
+        const isChatExists = fs.existsSync(`${chatsRoute}/${msg.data.options.room}.json`);
+        if(isChatExists){
+            rawdata = JSON.parse(
+                fs.readFileSync(`${chatsRoute}/${msg.data.options.room}.json`).toString()
+            ) as api.models.IMessage[];
         }
-        socket.to(msg.room).emit('Send Message Response', {'toRoom': msg.room, 'newMessage':newMessage});
+        else rawdata = [];
+
+        const newMessage: api.models.IMessage = {
+            id: rawdata.length + 1,
+            id_author: msg.data.options.id_author,
+            isHiddenFromAuthor: false,
+            message: msg.data.options.data,
+            time: today,
+            type: msg.data.options.type
+        };
+        
+        const broadcastResponse: socket.ISocketResponse<
+            api.models.IMessage & {toRoom: string},
+            socket.AvailableMessengerResponseRoutes
+        > = {
+            operation: 'Send Message Response',
+            status: 'OK',
+            data: {
+                requestFor: 'Send Message Response',
+                response: { ...newMessage, toRoom: msg.data.options.room }
+            }
+        };
+        
+        socket
+            .to(msg.data.options.room)
+            .emit<socket.AvailableMessengerResponseRoutes>('Send Message Response', broadcastResponse);
+            
+        socket
+            .emit<socket.AvailableMessengerResponseRoutes>('Send Message Response', broadcastResponse);
         rawdata.push(newMessage);
 
-        fs.writeFileSync(`${chatsRoute}/${msg.room}.json`, JSON.stringify(rawdata),{ flag:'w+'})
-        // socket.to(msg.room).emit('Send Message Response', );
+        fs.writeFileSync(`${chatsRoute}/${msg.data.options.room}.json`, JSON.stringify(rawdata),{ flag:'w+'})
     });
 
     socket.on<socket.AvailableMessengerRequestRoutes>('Delete Message Request', msg => {
@@ -323,7 +358,7 @@ const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
             async (err, result) => {
                 if (err) {
                     console.error(err);
-                    socket.emit('Create chat response', { 'response': err })
+                    socket.emit('Create Chat Response', { 'response': err })
                 };
                 if (result) {
                     const query2 = 'SELECT chatID from Messenger WHERE name="' + msg.newChat.name + '"';
@@ -350,45 +385,46 @@ const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
         async (msg: socket.ISocketRequest<
             api.models.IPreviewChat,
             socket.AvailableMessengerRequestRoutes
-        >) => {
-            console.log('Editing chat ' + msg.data.options.chatID);
+            >) => {
+            try {
+                console.log('Editing chat ' + msg.data.options.chatID);
             
-            let query1;
-            if (msg.data.options.avatar === null) {
-                query1 =
-                    `UPDATE Messenger 
+                let query1;
+                if (msg.data.options.avatar === null) {
+                    query1 =
+                        `UPDATE Messenger 
                     SET name="${msg.data.options.name}" 
                     WHERE
                     chatID=${Number(msg.data.options.chatID)}`;
-            }
-            else {
-                query1 =
-                    `UPDATE Messenger 
+                }
+                else {
+                    query1 =
+                        `UPDATE Messenger 
                     SET name="${msg.data.options.name}", 
                     avatar="${msg.data.options.avatar}"
                     WHERE
                     chatID=${Number(msg.data.options.chatID)}`;
-            };
+                };
 
-            await con.promise().query(query1);
+                await con.promise().query(query1);
 
-            const query2 =
-                `DELETE FROM 
+                const query2 =
+                    `DELETE FROM 
                 Messanger_has_member
                 WHERE idMessenger=${Number(msg.data.options.chatID)}`;
             
-            await con.promise().query(query2);
+                await con.promise().query(query2);
             
-            msg.data.options.members.map(async (member: api.models.IMember) => {
-                const query3 =
-                    `INSERT INTO 
+                msg.data.options.members.map(async (member: api.models.IMember) => {
+                    const query3 =
+                        `INSERT INTO 
                     Messanger_has_member (idMessenger, idMember)
                     VALUES (${Number(msg.data.options.chatID)}, ${member.idUsers})`;
                 
-                await con.promise().query(query3);
-            });
+                    await con.promise().query(query3);
+                });
 
-            const response: socket.ISocketResponse<
+                const response: socket.ISocketResponse<
                     api.models.IPreviewChat,
                     socket.AvailableMessengerResponseRoutes
                 > = {
@@ -399,7 +435,10 @@ const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
                         response: msg.data.options
                     }
                 };
-            socket.emit<socket.AvailableMessengerResponseRoutes>('Edit Chat Response', response);
+                socket.emit<socket.AvailableMessengerResponseRoutes>('Edit Chat Response', response);
+            } catch (err) {
+                console.log(`\t\x1b[31m Client ${user.name} connection Error: \n\t${err}`);
+            }
     })
 };
 

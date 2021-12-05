@@ -15,6 +15,7 @@ declare namespace socket {
     | "Create Chat Response"
     | "Edit Chat Response"
     | "Join Room Response"
+    | "Opponent Join Room Response"
     | "Send Message Response"
     | "Delete Message Response";
   

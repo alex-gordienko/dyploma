@@ -31,7 +31,7 @@ const initialState = {
 const arrayDiff = (originalArray: JSX.Element[], secondArray: string[]) => {
   return originalArray.filter(
     (element: JSX.Element) =>
-      !secondArray.includes(element.key !== null ? element.key.toString() : "0")
+      !secondArray.includes(element.key.toString() ?? "0")
   );
 };
 

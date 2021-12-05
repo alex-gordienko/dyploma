@@ -4,6 +4,14 @@ declare namespace api.models {
     chatroom: string;
   }
 
+  interface ISendMessageRequest {
+    room: string;
+    user: string;
+    id_author: number;
+    data: string;
+    type: "text" | "postredirect";
+  }
+
   interface IChat {
     chatID: string;
     avatar: string;

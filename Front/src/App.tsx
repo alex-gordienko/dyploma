@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useCallback, useRef } from "react";
+import React, { useEffect, useReducer, useRef } from "react";
 import { useParams, Redirect } from "react-router";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import { ThemeProvider } from "emotion-theming";
@@ -8,7 +8,6 @@ import Container from "./shared/components/Container";
 import darken from "./styles/themes/darken";
 // mine
 import Header from "./shared/components/Header";
-import BodyBlock from "./shared/components/BodyBlock";
 import LoginForm from "./shared/components/LoginForm";
 import ProfileEditor from "./shared/components/ProfileEditor";
 import ProfileView from "./shared/components/ProfileViewer";
@@ -16,9 +15,8 @@ import PeopleComponent from "./shared/components/PeopleComponent";
 import ChatsFeed from "./shared/components/ChatsBlock";
 
 import ErrorPage from "./shared/Pages/ErrorPage";
-import io from "socket.io-client";
 
-import { ServerAdress, sendToSocket } from "../src/backend/httpGet";
+import { sendToSocket } from "../src/backend/httpGet";
 
 import { initialState, reducer } from "./App.reducer";
 import {
@@ -28,13 +26,15 @@ import {
   logIn,
   saveUserDataToCookie,
   logOut,
-  setEditedPost,
   editProfile,
   getCountriesAndCities
 } from "./App.actions";
 import CreatePost from "./shared/components/PostEditor";
 import { IFullDataUser, ISavedUser } from "./App.types";
 import { getStateFromStorage } from "./shared/storage/localStorage.actions";
+import MainPageComponent from "./shared/Pages/Main/Main.component";
+import FriendListComponent from "./shared/Pages/FriendList/FriendList.component";
+import ChatComponent from "./shared/Pages/Chat/ChatPage.component";
 
 const App = () => {
   const [
@@ -187,66 +187,48 @@ const App = () => {
     dispatch(isLoading(true));
   };
 
-  const MainPage = useCallback(() => {
-    return isReady ? (
-      isLogin ? (
-        <BodyBlock
-          mode="Main Page"
-          socket={socket}
-          token={token}
-          currentUser={user}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  }, [isReady, isLogin]);
+  const MainPage = () => (
+    <MainPageComponent
+      socket={socket}
+      token={token}
+      currentUser={user}
+      mode="Main Page"
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
-  const FriendList = () => {
-    const { username } = useParams<{ username: string }>();
-    return isReady && country_city ? (
-      isLogin ? (
-        <PeopleComponent
-          socket={socket}
-          token={token}
-          currentUser={user}
-          userNameToSearchFriends={username}
-          contries={country_city.country}
-          cities={country_city.city}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  };
+  const FriendList = () => (
+    <FriendListComponent
+      socket={socket}
+      token={token}
+      currentUser={user}
+      country_city={country_city}
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
-  const Chat = () => {
-    return isReady && country_city ? (
-      isLogin ? (
-        <ChatsFeed
-          socket={socket}
-          currentUser={user}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  };
+  const Chat = () => (
+    <ChatComponent
+      socket={socket}
+      currentUser={user}
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
   const PostEditor = () => {
     const { postID } = useParams<{ postID: string }>();

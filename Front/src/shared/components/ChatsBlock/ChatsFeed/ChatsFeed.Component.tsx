@@ -16,7 +16,7 @@ interface IFeedProps {
 }
 
 const Chats = ({ data, onSelect, onEdit, onDelete }: IFeedProps) => {
-  return data !== [] ? (
+  return data ? (
     <StyledFeed>
       {data
         .sort((elem1, elem2) => {
