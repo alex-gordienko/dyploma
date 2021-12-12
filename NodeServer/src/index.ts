@@ -47,10 +47,10 @@ const app: express.Express = express();
 
 app.use(cors());
 
-app.use(express.static(path.resolve(__dirname, "../../Front/build")));
+app.use(express.static(path.resolve(__dirname, "../buildFront")));
 
 app.all('*', async (request, response, next) => {
-    let filePath = path.resolve(__dirname, "../../Front/build/index.html");
+    let filePath = path.resolve(__dirname, "../buildFront/index.html");
     if (request.url.includes('/confirm')) {
         try {
             const { token, user } = request.query;

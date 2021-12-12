@@ -3,19 +3,12 @@ import { useParams, Redirect } from "react-router";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import { ThemeProvider } from "emotion-theming";
 import lighten from "./styles/themes/lighten";
-import Preloader from "./shared/components/Preloader";
 import Container from "./shared/components/Container";
 import darken from "./styles/themes/darken";
-// mine
 import Header from "./shared/components/Header";
 import LoginForm from "./shared/components/LoginForm";
 import ProfileEditor from "./shared/components/ProfileEditor";
-import ProfileView from "./shared/components/ProfileViewer";
-import PeopleComponent from "./shared/components/PeopleComponent";
-import ChatsFeed from "./shared/components/ChatsBlock";
-
 import ErrorPage from "./shared/Pages/ErrorPage";
-
 import { sendToSocket } from "../src/backend/httpGet";
 
 import { initialState, reducer } from "./App.reducer";
@@ -31,10 +24,14 @@ import {
 } from "./App.actions";
 import CreatePost from "./shared/components/PostEditor";
 import { IFullDataUser, ISavedUser } from "./App.types";
-import { getStateFromStorage } from "./shared/storage/localStorage.actions";
+import {
+  checkIfUserHasCookies,
+  getStateFromStorage
+} from "./shared/storage/localStorage.actions";
 import MainPageComponent from "./shared/Pages/Main/Main.component";
 import FriendListComponent from "./shared/Pages/FriendList/FriendList.component";
 import ChatComponent from "./shared/Pages/Chat/ChatPage.component";
+import ProfileViewComponent from "./shared/Pages/ProfileView/ProfileView.component";
 
 const App = () => {
   const [
@@ -72,14 +69,15 @@ const App = () => {
           dispatch(logIn(user));
         } else if (res.status === "OK") {
           timeHandler.current = setTimeout(() => {
-            // console.log(res.data.response)
             dispatch(logIn(res.data.response));
+            if (!checkIfUserHasCookies()) {
+              dispatch(saveUserDataToCookie());
+            }
             setTimeout(() => {
               dispatch(isLoading(true));
             }, 1000);
           }, 100);
         } else {
-          // console.log(res)
           dispatch(
             setErrorMessage(
               "Incorrect Server Answer. Please, contact with admin with this Error: \n" +
@@ -136,7 +134,7 @@ const App = () => {
     await dispatch(isLoading(false));
     await dispatch(setProgress("Reconnect to server..."));
     const data: ISavedUser = await getStateFromStorage("savedUser");
-    await login(data.username, data.password);
+    await login(data.email, data.password);
     await dispatch(setProgress("Update info about you..."));
     sendToSocket<{}, api.models.IAvailableCountriesActions>(socket, {
       data: {
@@ -157,15 +155,14 @@ const App = () => {
       }
       // error => console.log(error)
     );
-    // setInterval(async function(){
-    // console.log("Tick");
-    // dispatch(saveUserDataToCookie());
-    // }, 5*60*1000);
+    setInterval(async () => {
+      dispatch(saveUserDataToCookie());
+    }, 5 * 60 * 1000);
   }, [socket]);
   window.onbeforeunload = (e: Event) => {
     // const formData = "logout=" + encodeURIComponent(user.username);
     // sendToSocket(socket, "login.php", formData);
-    dispatch(saveUserDataToCookie());
+    // dispatch(saveUserDataToCookie());
   };
 
   async function getUserData(log: string, pass: string) {
@@ -248,28 +245,20 @@ const App = () => {
     );
   };
 
-  const ProfileViewer = (props: any) => {
-    const { username } = useParams<{ username: string }>();
-
-    return isReady ? (
-      isLogin ? (
-        <ProfileView
-          socket={socket}
-          token={token}
-          username={username}
-          editable={username === user.username ? true : false}
-          currentUser={user}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  };
+  const ProfileViewer = () => (
+    <ProfileViewComponent
+      socket={socket}
+      token={token}
+      currentUser={user}
+      mode="Main Page"
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
   const ProfileEdit = () => {
     return isLogin ? (

@@ -1,4 +1,4 @@
-export const generateDate = (date?: Date) => {
+export const formatDate = (date?: Date) => {
   const d = date || new Date();
   const dateTime: string =
     d.getFullYear() +

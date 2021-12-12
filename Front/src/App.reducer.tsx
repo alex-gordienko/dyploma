@@ -144,15 +144,11 @@ const reducer = (state: IAppState, action: IAppActions) => {
       };
     }
     case "SaveUserData": {
-      const postData =
-        '{"username": "' +
-        state.user.username +
-        '",' +
-        ' "password": "' +
-        state.user.password +
-        '"' +
-        "}";
-      saveData("savedUser", postData);
+      const userData = {
+        email: state.user.email,
+        password: state.user.password
+      };
+      saveData("savedUser", JSON.stringify(userData));
       return { ...state };
     }
     case "isLoading": {

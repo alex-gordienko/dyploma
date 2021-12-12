@@ -5,7 +5,7 @@ import { Connection } from 'mysql2';
 import RowDataPacket from 'mysql2/typings/mysql/lib/protocol/packets/RowDataPacket';
 import { Socket } from 'socket.io';
 import UserGetter from './DataParserScripts/userGetter';
-import { generateDate, parseData } from './DataParserScripts/utils';
+import { formatDate, parseData } from './DataParserScripts/utils';
 
 const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
     const chatsRoute = path.resolve(__dirname, '../messages');
@@ -264,7 +264,7 @@ const ChatRoute = (con: Connection, socket: Socket, user: UserGetter) => {
         console.log('Send Message Response from '+msg.data.options.user+' in room '+msg.data.options.room);
         console.log('content: '+msg.data.options.data);
         const now = new Date();
-        const today = generateDate();
+        const today = formatDate();
         let rawdata: api.models.IMessage[] = [];
 
         const isChatExists = fs.existsSync(`${chatsRoute}/${msg.data.options.room}.json`);

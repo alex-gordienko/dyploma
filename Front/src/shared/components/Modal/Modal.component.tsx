@@ -1,7 +1,7 @@
-import React, { Component } from "react";
+import React, { FC } from "react";
 import { ButtonBlock } from "../EditorComponents/EditorComponents.styled";
 
-import { StyledModal } from "./Modal.styled";
+import { StyledModal, ModalFullScreenContainer } from "./Modal.styled";
 
 interface IModalProps {
   show: boolean;
@@ -13,31 +13,41 @@ interface IModalProps {
   onCancel?: () => void;
 }
 
-export default class Modal extends Component<IModalProps> {
-  public render() {
-    return (
-      <React.Fragment>
-        {this.props.show && (
-          <StyledModal type={this.props.type}>
-            <h1>{this.props.name}</h1>
-            <div className="content">{this.props.children}</div>
+const Modal: FC<IModalProps> = (props: IModalProps) => {
+  const onOutsideFormClick = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    if (event.target === event.currentTarget) {
+      return props.onCancel();
+    }
+  };
+
+  return (
+    <React.Fragment>
+      {props.show && (
+        <ModalFullScreenContainer onClick={onOutsideFormClick}>
+          <StyledModal type={props.type}>
+            <h1>{props.name}</h1>
+            <div className="content">{props.children}</div>
             <ButtonBlock>
               <button
-                disabled={this.props.isDisabled}
+                disabled={props.isDisabled}
                 className="label-button"
-                onClick={this.props.onOK}
+                onClick={props.onOK}
               >
                 OK
               </button>
-              {this.props.onCancel && (
-                <button className="label-button" onClick={this.props.onCancel}>
+              {props.onCancel && (
+                <button className="label-button" onClick={props.onCancel}>
                   Cancel
                 </button>
               )}
             </ButtonBlock>
           </StyledModal>
-        )}
-      </React.Fragment>
-    );
-  }
-}
+        </ModalFullScreenContainer>
+      )}
+    </React.Fragment>
+  );
+};
+
+export default Modal;

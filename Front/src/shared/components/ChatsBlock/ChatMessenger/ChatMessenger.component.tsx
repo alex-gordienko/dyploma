@@ -26,7 +26,7 @@ import { ReactComponent as Cross } from "../../../../assets/icons/cross.svg";
 interface IChatProps {
   currentUser: IFullDataUser;
   isTyping: { room: string; typing: string[] }[];
-  data: api.models.IChat;
+  data: api.models.IChat | null;
   onTyping: (chatroom: string, username: string) => void;
   onSend: (chatroom: string, textMessage: string) => void;
   onDelete: (
@@ -92,13 +92,12 @@ const Chat = ({
   };
 
   const MessageDateBlock = (item: api.models.IMessage, indx: number) => {
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var birth = new Date(item.time);
-    var prevMessageDate = new Date(
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const currentMessageDate = new Date(item.time);
+    const prevMessageDate = new Date(
       indx === 0 ? data.messages[indx].time : data.messages[indx - 1].time
     );
-    var title;
 
     const months = [
       "Jan",
@@ -113,21 +112,21 @@ const Chat = ({
       "Nov",
       "Dec"
     ];
-    title =
-      birth.getDate() +
+    const title =
+      currentMessageDate.getDate() +
       " " +
-      months[birth.getMonth()] +
+      months[currentMessageDate.getMonth()] +
       " " +
-      birth.getFullYear();
+      currentMessageDate.getFullYear();
 
     if (indx === 0) return <MessageDate title={title}>{title}</MessageDate>;
     else {
-      if (birth.getDate() !== prevMessageDate.getDate()) {
-        if (today.getDate() - birth.getDate() === 0)
+      if (currentMessageDate.getDate() !== prevMessageDate.getDate()) {
+        if (today.getDate() - currentMessageDate.getDate() === 0)
           return <MessageDate title={title}>Today</MessageDate>;
-        else if (today.getDate() - birth.getDate() === 1)
+        else if (today.getDate() - currentMessageDate.getDate() === 1)
           return <MessageDate title={title}>Yesterday</MessageDate>;
-        else if (today.getDate() - birth.getDate() > 2)
+        else if (today.getDate() - currentMessageDate.getDate() > 2)
           return <MessageDate title={title}>{title}</MessageDate>;
       } else return null;
     }
@@ -191,7 +190,7 @@ const Chat = ({
     setShowModal(true);
   };
 
-  return data.chatID !== "0" ? (
+  return data ? (
     <StyledMessenger>
       {selectedMessages.length < 1 ? (
         <MessangerHeader>
@@ -246,18 +245,15 @@ const Chat = ({
                 <div>
                   {MessageDateBlock(item, indx)}
                   <MessageContainer
-                    myMessage={
-                      item.id_author === currentUser.idUsers ? true : false
-                    }
+                    myMessage={item.id_author === currentUser.idUsers}
+                    isSelected={selectedMessages.includes(item)}
                     onClick={() => selectMessage(item.id)}
                     title={item.time}
                     key={indx}
                   >
                     {MessageAuthorBlock(item, indx)}
                     <MessageContent
-                      myMessage={
-                        item.id_author === currentUser.idUsers ? true : false
-                      }
+                      myMessage={item.id_author === currentUser.idUsers}
                     >
                       {item.message}
                     </MessageContent>

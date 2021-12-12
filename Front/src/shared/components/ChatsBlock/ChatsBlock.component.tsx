@@ -3,7 +3,6 @@ import React, {
   useState,
   useRef,
   useEffect,
-  useCallback,
   useImperativeHandle,
   forwardRef
 } from "react";
@@ -25,18 +24,10 @@ interface IChatsFeedProps {
   socket: SocketIOClient.Socket;
   onError: (errorMessage: string) => void;
 }
+
 const ChatsFeed = forwardRef(
   ({ currentUser, socket, onError }: IChatsFeedProps, ref) => {
     const token = tokenGen(12);
-
-    var nullRoom: api.models.IChat = {
-      chatID: "0",
-      avatar: defaultAvatar,
-      type: "private",
-      name: "Test chat",
-      members: [],
-      messages: []
-    };
     var nullMembers: api.models.IMember[] = [];
     var nullFilter = { username: "", country: "", city: "", date: "" };
 
@@ -46,7 +37,7 @@ const ChatsFeed = forwardRef(
       api.models.IPreviewChat
     >();
     const [chats, setChats] = useState<api.models.IPreviewChat[]>([]);
-    const [room, setRoom] = useState(nullRoom);
+    const [room, setRoom] = useState<api.models.IChat>();
     const [isTyping, setIsTyping] = useState([{ room: "0", typing: [""] }]);
     const [members, setMembers] = useState(nullMembers);
     const [isDisabled, setIsDisabled] = useState(false);
@@ -70,13 +61,13 @@ const ChatsFeed = forwardRef(
     useImperativeHandle(ref, () => ({
       loadAvailableUsers(
         res: socket.ISocketResponse<
-          ISearchedUser[],
+          ISearchedUser[] | string,
           api.models.IAvailableUserActions
         >
       ) {
         if (res.data.requestFor === "Search Friends") {
           if (res.status === "OK") {
-            let users: ISearchedUser[] = res.data.response;
+            let users: ISearchedUser[] = res.data.response as ISearchedUser[];
             let chatMembers: api.models.IMember[] = users.map(user => {
               return {
                 idUsers: user.idUsers,
@@ -90,12 +81,15 @@ const ChatsFeed = forwardRef(
               uniqBy([...prevState, ...chatMembers], "idUsers")
             );
           }
+          if (res.status !== "OK") {
+            onError(res.data.response as string);
+          }
         }
       },
 
       setChatFeed(
         res: socket.ISocketResponse<
-          api.models.IPreviewChat,
+          api.models.IPreviewChat | string,
           socket.AvailableMessengerResponseRoutes
         >
       ) {
@@ -105,15 +99,22 @@ const ChatsFeed = forwardRef(
           res.status === "OK"
         ) {
           setChats(prevState =>
-            uniqBy([...prevState, res.data.response], "chatID")
+            uniqBy(
+              [...prevState, res.data.response as api.models.IPreviewChat],
+              "chatID"
+            )
           );
           setIsTyping(prevState => {
             let newChats = prevState.concat({
-              room: res.data.response.chatID.toString(),
+              room: (res.data
+                .response as api.models.IPreviewChat).chatID.toString(),
               typing: [""]
             });
             return newChats;
           });
+        }
+        if (res.status !== "OK") {
+          onError(res.data.response as string);
         }
         setShowModal(false);
         setSelectedChatToEdit(null);
@@ -121,22 +122,29 @@ const ChatsFeed = forwardRef(
 
       getChats(
         res: socket.ISocketResponse<
-          api.models.IPreviewChat,
+          api.models.IPreviewChat | string,
           socket.AvailableMessengerResponseRoutes
         >
       ) {
         console.log(res);
         if (res.operation === "Create Chat Response" && res.status === "OK") {
           setChats(prevState =>
-            uniqBy([...prevState, res.data.response], "chatID")
+            uniqBy(
+              [...prevState, res.data.response as api.models.IPreviewChat],
+              "chatID"
+            )
           );
           setIsTyping(prevState => {
             let newChats = prevState.concat({
-              room: res.data.response.chatID.toString(),
+              room: (res.data
+                .response as api.models.IPreviewChat).chatID.toString(),
               typing: [""]
             });
             return newChats;
           });
+        }
+        if (res.status !== "OK") {
+          onError(res.data.response as string);
         }
         setShowModal(false);
         setSelectedChatToEdit(null);
@@ -144,7 +152,7 @@ const ChatsFeed = forwardRef(
 
       editChatsFeed(
         res: socket.ISocketResponse<
-          api.models.IPreviewChat,
+          api.models.IPreviewChat | string,
           socket.AvailableMessengerResponseRoutes
         >
       ) {
@@ -152,11 +160,17 @@ const ChatsFeed = forwardRef(
         if (res.operation === "Edit Chat Response" && res.status === "OK") {
           setChats(prevState => {
             return prevState.map(chat => {
-              if (chat.chatID === res.data.response.chatID)
-                return res.data.response;
+              if (
+                chat.chatID ===
+                (res.data.response as api.models.IPreviewChat).chatID
+              )
+                return res.data.response as api.models.IPreviewChat;
               else return chat;
             });
           });
+        }
+        if (res.status !== "OK") {
+          onError(res.data.response as string);
         }
         setShowModal(false);
         setSelectedChatToEdit(null);

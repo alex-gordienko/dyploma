@@ -12,7 +12,7 @@ import { nullPhoto, nullPost } from "../../../App.reducer";
 import { Redirect } from "react-router-dom";
 import Preloader from "../Preloader";
 import { sendToSocket } from "../../../backend/httpGet";
-import { generateDate } from "../utils/generateData";
+import { formatDate } from "../utils/generateData";
 
 interface IPostEditorProps {
   postId: number | "new";
@@ -73,7 +73,7 @@ const PostEditor = ({
       data: {
         options: {
           ...newPost,
-          date: generateDate(),
+          date: formatDate(),
           idUser: currentUser.idUsers,
           username: currentUser.username
         },
@@ -92,7 +92,7 @@ const PostEditor = ({
         data: {
           options: {
             ...newPost,
-            date: generateDate()
+            date: formatDate()
           },
           requestFor: "edit post"
         },
