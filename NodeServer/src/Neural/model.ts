@@ -1,25 +1,28 @@
-//@ts-check
-const tf = require("@tensorflow/tfjs-node");
-const fse = require("fs-extra");
-const path = require("path");
+import * as tf from "@tensorflow/tfjs-node";
+import fse from 'fs-extra';
+import path from "path";
+import { ITrainingParams } from "./app";
 
 // Loads mobilenet and returns a model that returns the internal activation
 // we'll use as input to our classifier model.
 async function loadDecapitatedMobilenet() {
-    // @ts-ignore
     const mobilenet = await tf.loadLayersModel(
         "https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_1.0_224/model.json"
     );
 
     // Return a model that outputs an internal activation.
     const layer = mobilenet.getLayer("conv_pw_13_relu");
-    // @ts-ignore
     return tf.model({ inputs: mobilenet.inputs, outputs: layer.output });
 }
 
 class Model {
+    public currentModelDirPath: string | null;
+    public model: tf.Sequential | null;
+    public decapitatedMobilenet: tf.LayersModel | null;
+    public labels: string[] | null;
+
     constructor() {
-        this.currentModelPath = null;
+        this.currentModelDirPath = null;
         this.decapitatedMobilenet = null;
         this.model = null;
         this.labels = null;
@@ -32,21 +35,18 @@ class Model {
     // Creates a 2-layer fully connected model. By creating a separate model,
     // rather than adding layers to the mobilenet model, we "freeze" the weights
     // of the mobilenet model, and only train weights from the new model.
-    buildRetrainingModel(denseUnits, numClasses, learningRate) {
-        // @ts-ignore
+    buildRetrainingModel(denseUnits: number, numClasses: number, learningRate: number) {
         this.model = tf.sequential({
             layers: [
                 // Flattens the input to a vector so we can use it in a dense layer. While
                 // technically a layer, this only performs a reshape (and has no training
                 // parameters).
-                // @ts-ignore
                 tf.layers.flatten({
-                    inputShape: this.decapitatedMobilenet.outputs[0].shape.slice(
+                    inputShape: this.decapitatedMobilenet?.outputs[0].shape.slice(
                         1
                     )
                 }),
                 // Layer 1.
-                // @ts-ignore
                 tf.layers.dense({
                     units: denseUnits,
                     activation: 'softplus',
@@ -54,7 +54,6 @@ class Model {
                     useBias: true
                 }),
                 // Layer 2.
-                // @ts-ignore
                 tf.layers.dense({
                     units: denseUnits,
                     activation: 'hardSigmoid',
@@ -63,7 +62,6 @@ class Model {
                 }),
                 // Layer 3. The number of units of the last layer should correspond
                 // to the number of classes we want to predict.
-                // @ts-ignore
                 tf.layers.dense({
                     units: numClasses,
                     kernelInitializer: "varianceScaling",
@@ -74,37 +72,36 @@ class Model {
         });
 
         // Creates the optimizers which drives training of the model.
-        // @ts-ignore
         const optimizer = tf.train.adam(learningRate);
         // We use categoricalCrossentropy which is the loss function we use for
         // categorical classification which measures the error between our predicted
         // probability distribution over classes (probability that an input is of each
         // class), versus the label (100% probability in the true class)>
         this.model.compile({
-            optimizer: optimizer,
+            optimizer,
             loss: "categoricalCrossentropy"
         });
     }
 
     currentModelPath() {
-        return this.currentModelPath;
+        return this.currentModelDirPath;
     }
 
-    getPrediction(x) {
+    getPrediction(x: any) {
         // Assume we are getting the embeddings from the decapitatedMobilenet
         let embeddings = x;
         // If the second dimension is 224, treat it as though it's an image tensor
         if (x.shape[1] === 224) {
-            embeddings = this.decapitatedMobilenet.predict(x);
+            embeddings = this.decapitatedMobilenet ? this.decapitatedMobilenet.predict(x) : x;
         }
         // @ts-ignore
-        let prediction = this.model.predict(embeddings).dataSync();
+        const prediction = this.model?.predict(embeddings).dataSync();
 
-        let top5 = Array.from(prediction)
+        const top5 = Array.from(prediction)
                 .map((p,i)=>{
                     return{
-                        label: this.labels[i],
-                        confidence: p.toFixed(3) * 100
+                        label: this.labels ? this.labels[i] : 'Labels not set',
+                        confidence: (p as any).toFixed(3) * 100
                     }
                 }).sort((a,b)=>{
                     return b.confidence - a.confidence
@@ -113,7 +110,7 @@ class Model {
         return top5
     }
 
-    async loadModel(dirPath) {
+    async loadModel(dirPath: string) {
         // @ts-ignore
         this.model = await tf.loadLayersModel(
             "file://" + dirPath + "/model.json"
@@ -122,23 +119,27 @@ class Model {
             .readJson(path.join(dirPath, "labels.json"))
             .then(obj => obj.Labels);
 
-        this.currentModelPath = dirPath;
+        this.currentModelDirPath = dirPath;
     }
 
-    async saveModel(dirPath) {
+    async saveModel(dirPath: string) {
         fse.ensureDirSync(dirPath);
-        await this.model.save("file://" + dirPath);
+        await this.model?.save("file://" + dirPath);
         await fse.writeJson(path.join(dirPath, "labels.json"), {
             Labels: this.labels
         });
 
-        this.currentModelPath = dirPath;
+        this.currentModelDirPath = dirPath;
     }
 
     /**
      * Sets up and trains the classifier.
      */
-    async train(dataset, labels, trainingParams) {
+    async train(
+        dataset: { images: tf.Tensor4D; labels: tf.Tensor<tf.Rank> },
+        labels: string[],
+        trainingParams: ITrainingParams
+    ) {
         if (dataset === null || dataset.images === null) {
             throw new Error("Add some examples before training!");
         }
@@ -169,7 +170,7 @@ class Model {
 
         // Train the model! Model.fit() will shuffle xs & ys so we don't have to.
         console.time("Training Time");
-        return this.model.fit(
+        return this.model!.fit(
             dataset.images.gather(shuffledIndices),
             dataset.labels.gather(shuffledIndices),
             {
@@ -180,7 +181,7 @@ class Model {
                     // @ts-ignore
                     onBatchEnd: async (batch, logs) => {
                         trainingParams.trainStatus(
-                            "Loss: " + logs.loss.toFixed(5)
+                            "Loss: " + logs?.loss.toFixed(5)
                         );
                     },
                     // @ts-ignore
@@ -193,4 +194,4 @@ class Model {
     }
 }
 
-module.exports = Model;
+export default Model;

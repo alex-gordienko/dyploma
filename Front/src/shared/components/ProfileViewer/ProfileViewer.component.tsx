@@ -153,13 +153,10 @@ const ProfileViewer = forwardRef(
           <UserDataBlock
             currentUser={currentUser}
             isMyFriend={
-              friends.length > 0
-                ? friends.find(
-                    friend => friend.username === currentUser.username
-                  )
-                  ? true
-                  : false
-                : false
+              friends.length > 0 &&
+              Boolean(
+                friends.find(friend => friend.username === currentUser.username)
+              )
             }
             userData={userProfile}
           />

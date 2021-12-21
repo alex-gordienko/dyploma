@@ -250,7 +250,6 @@ const App = () => {
       socket={socket}
       token={token}
       currentUser={user}
-      mode="Main Page"
       isLogin={isLogin}
       isReady={isReady}
       progressMessage={progressMessage}

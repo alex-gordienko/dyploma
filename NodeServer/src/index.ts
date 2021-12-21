@@ -6,6 +6,7 @@ import path from 'path';
 import Home from './routes/Home';
 import cors from 'cors';
 import mysql, { RowDataPacket } from 'mysql2';
+import Neural from './Neural/app';
 
 export const connectDB = async(): Promise<mysql.Connection | null> => {
     try{
@@ -96,11 +97,19 @@ app.all('*', async (request, response, next) => {
 const port = process.env.PORT || 5001;
 
 if (false) {
+    setInterval(() => {
+        Neural({skip_training: true});
+    }, 1000 * 10);
+
     const server = https.createServer(app).listen(port, ()=>{
         console.log(`App Started at port ${port}`);
     });
     Home(server);
 } else {
+    setTimeout(() => {
+        Neural({skip_training: true});
+    }, 1000 * 10);
+
     const server = app.listen(port,()=>{
         console.log(`App Started at port ${port}`);
     });

@@ -42,23 +42,25 @@ const PeopleComponent = ({
     "User Searcher Response",
     (
       res: socket.ISocketResponse<
-        ISearchedUser[],
+        ISearchedUser[] | string,
         api.models.IAvailableUserActions
       >
     ) => {
       console.log(res.data.response);
-      socket.removeEventListener("User Searcher Response");
 
       if (res.data.requestFor === "Search Peoples") {
         if (res.status === "Not Found") {
           if (searchedPeoples.length < 1) setSearchedPeoples([]);
         }
         if (res.status === "SQL Error") {
-          onError((res.data.response as unknown) as string);
+          onError(res.data.response as string);
         }
         if (res.status === "OK") {
           setSearchedPeoples(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
           );
         }
         setReadyToCallNextPage(true);
@@ -68,11 +70,14 @@ const PeopleComponent = ({
           if (friends.length < 1) setFriends([]);
         }
         if (res.status === "SQL Error") {
-          onError((res.data.response as unknown) as string);
+          onError(res.data.response as string);
         }
         if (res.status === "OK") {
           setFriends(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
           );
         }
         setReadyToCallNextPage(true);
@@ -86,7 +91,10 @@ const PeopleComponent = ({
         }
         if (res.status === "OK") {
           setInvites(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
           );
         }
         setReadyToCallNextPage(true);
@@ -100,7 +108,10 @@ const PeopleComponent = ({
         }
         if (res.status === "OK") {
           setBlocked(prevState =>
-            uniqBy([...prevState, ...res.data.response], "idUsers")
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
           );
         }
         setReadyToCallNextPage(true);

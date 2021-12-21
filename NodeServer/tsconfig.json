@@ -3,7 +3,8 @@
     "target": "ES6",
     "esModuleInterop": true,
     "module": "CommonJS",
-    "strict": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
     "moduleResolution": "Node",
     "declaration": true,
     "allowUnreachableCode": true,
@@ -20,6 +21,7 @@
     "lib": [ "es2017", "DOM"]
   },
   "include": [
-    "src"
+    "src",
+    "Neural/*"
   ]
 }

@@ -1,12 +1,10 @@
-// @ts-nocheck
+import * as tf from "@tensorflow/tfjs-node";
+import fg from "fast-glob";
+import fse from "fs-extra";
+import sharp from "sharp";
+import path from "path";
 
-const tf = require("@tensorflow/tfjs-node");
-const fg = require("fast-glob");
-const fse = require("fs-extra");
-const sharp = require("sharp");
-const path = require("path");
-
-async function fileToTensor(filename) {
+async function fileToTensor(filename: string) {
     const { data, info } = await sharp(filename)
         .raw()
         .toBuffer({ resolveWithObject: true });
@@ -14,11 +12,11 @@ async function fileToTensor(filename) {
     return imageToTensor(data, info);
 }
 
-async function getDirectories(imagesDirectory) {
+async function getDirectories(imagesDirectory: string) {
     return await fse.readdir(imagesDirectory);
 }
 
-async function getImagesInDirectory(directory) {
+async function getImagesInDirectory(directory: string) {
     return await fg([
         path.join(directory, "*.jpg"),
         path.join(directory, "*/*.jpg"),
@@ -27,8 +25,8 @@ async function getImagesInDirectory(directory) {
     ]);
 }
 
-const imageToTensor = (pixelData, imageInfo) => {
-    const outShape = [1, imageInfo.height, imageInfo.width, imageInfo.channels];
+const imageToTensor = (pixelData: Buffer, imageInfo: sharp.OutputInfo) => {
+    const outShape = [1, imageInfo.height, imageInfo.width, imageInfo.channels] as [number, number, number, number];
 
     return tf.tidy(() =>
         tf
@@ -40,13 +38,13 @@ const imageToTensor = (pixelData, imageInfo) => {
     );
 };
 
-async function readImagesDirectory(imagesDirectory) {
+async function readImagesDirectory(imagesDirectory: string) {
     const directories = await getDirectories(imagesDirectory);
     const result = await Promise.all(
         directories.map(async directory => {
             const p = path.join(imagesDirectory, directory);
             return getImagesInDirectory(p).then(images => {
-                return { label: directory, images: images };
+                return { label: directory, images };
             });
         })
     );
@@ -54,39 +52,50 @@ async function readImagesDirectory(imagesDirectory) {
     return result;
 }
 class Data {
+    public labelsAndImages: {
+        label: string;
+        images: string[];
+    }[] | null;
+    public dataset: {
+        images: tf.Tensor4D,
+        labels: tf.Tensor<tf.Rank>
+    } | null;
+
     constructor() {
         this.dataset = null;
         this.labelsAndImages = null;
     }
 
-    getEmbeddingsForImage(index) {
-        return this.dataset.images.gather([index]);
+    public getEmbeddingsForImage(index: number) {
+        return this.dataset!.images.gather([index]);
     }
 
-    fileToTensor(filename) {
+    public fileToTensor(filename: string) {
         return fileToTensor(filename);
     }
 
-    imageToTensor(image, numChannels) {
+    public imageToTensor(image: Buffer, numChannels: sharp.OutputInfo) {
         return imageToTensor(image, numChannels);
     }
 
-    labelIndex(label) {
-        return this.labelsAndImages.findIndex(item => item.label === label);
+    public labelIndex(label: string) {
+        return this.labelsAndImages ?
+            this.labelsAndImages.findIndex(item => item.label === label)
+            : -1;
     }
 
-    async loadLabelsAndImages(imagesDirectory) {
+    async loadLabelsAndImages(imagesDirectory: string) {
         this.labelsAndImages = await readImagesDirectory(imagesDirectory);
     }
 
-    async loadTrainingData(model) {
-        const numClasses = this.labelsAndImages.length;
-        const numImages = this.labelsAndImages.reduce(
+    async loadTrainingData(model: tf.LayersModel) {
+        const numClasses = this.labelsAndImages ? this.labelsAndImages.length : 0;
+        const numImages = this.labelsAndImages?.reduce(
             (acc, item) => acc + item.images.length,
             0
-        );
+        ) || 0;
 
-        const embeddingsShape = model.outputs[0].shape.slice(1);
+        const embeddingsShape = model.outputs[0].shape.slice(1) as number[];
         const embeddingsFlatSize = tf.util.sizeFromShape(embeddingsShape);
         embeddingsShape.unshift(numImages);
         const embeddings = new Float32Array(
@@ -99,12 +108,13 @@ class Data {
         let labelsOffset = 0;
         console.log("Loading Training Data");
         console.time("Loading Training Data");
-        for (const element of this.labelsAndImages) {
-            let labelIndex = this.labelIndex(element.label);
+        for (const element of this.labelsAndImages!) {
+            const labelIndex = this.labelIndex(element.label);
             for (const image of element.images) {
-                let t = await fileToTensor(image);
+                const t = await fileToTensor(image);
                 tf.tidy(() => {
-                    let prediction = model.predict(t);
+                    const prediction = model.predict(t);
+                    // @ts-ignore
                     embeddings.set(prediction.dataSync(), embeddingsOffset);
                     labels.set([labelIndex], labelsOffset);
                 });
@@ -120,10 +130,10 @@ class Data {
         }
 
         this.dataset = {
-            images: tf.tensor4d(embeddings, embeddingsShape),
+            images: tf.tensor4d(embeddings, embeddingsShape as [number, number, number, number]),
             labels: tf.oneHot(tf.tensor1d(labels, "int32"), numClasses)
         };
     }
 }
 
-module.exports = new Data();
+export default new Data();

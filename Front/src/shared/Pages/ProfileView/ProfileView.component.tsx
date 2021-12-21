@@ -9,7 +9,6 @@ import { ProfileViewerContainer } from "./ProfileView.styled";
 
 interface IProfileViewProps {
   socket: SocketIOClient.Socket;
-  mode: "Main Page" | "Profile";
   isReady: boolean;
   isLogin: boolean;
   token: string;
@@ -20,7 +19,6 @@ interface IProfileViewProps {
 
 const ProfileViewComponent: FC<IProfileViewProps> = ({
   socket,
-  mode,
   token,
   currentUser,
   isLogin,
@@ -40,23 +38,23 @@ const ProfileViewComponent: FC<IProfileViewProps> = ({
         ProfileViewRef.current.loadFriendList
       );
     }
-    return () => {
-      socket.removeEventListener("User Searcher Response");
-    };
-  }, [ProfileViewRef, ProfileViewRef.current]);
-
-  useEffect(() => {
     if (PostFeedRef && PostFeedRef.current) {
       socket.on("Get Posts Response", PostFeedRef.current.getPostsResponse);
       socket.on("Comments Response", PostFeedRef.current.commentsResponse);
       socket.on("Rating Response", PostFeedRef.current.ratingResponse);
     }
     return () => {
+      socket.removeEventListener("User Searcher Response");
       socket.removeEventListener("Get Posts Response");
       socket.removeEventListener("Comments Response");
       socket.removeEventListener("Rating Response");
     };
-  }, [PostFeedRef, PostFeedRef.current]);
+  }, [
+    ProfileViewRef,
+    ProfileViewRef.current,
+    PostFeedRef,
+    PostFeedRef.current
+  ]);
 
   const TabSelection = (mode: "public" | "private") => {
     setSelectedTab(mode === "public" ? 1 : mode === "private" ? 2 : 0);
