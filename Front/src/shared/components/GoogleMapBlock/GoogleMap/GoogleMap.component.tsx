@@ -11,12 +11,12 @@ import MarkerClusterer from "react-google-maps/lib/components/addons/MarkerClust
 
 import marker1 from "../../../../assets/icons/pencil.svg";
 import marker2 from "../../../../assets/icons/search.svg";
-import { IPost, IUserPosition } from "../../../../App.types";
+import { IUserPosition } from "../../../../App.types";
 
 interface IGoogleMapPostProps {
   mode: "Posts";
-  data?: IPost[];
-  aloneMarker?: IPost;
+  data?: api.models.IPost[];
+  aloneMarker?: api.models.IPost;
   selectedMarker?: (id: number) => void;
   newPosition?: (lat: number, lng: number) => void;
 }

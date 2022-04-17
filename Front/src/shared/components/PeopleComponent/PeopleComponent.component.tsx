@@ -1,20 +1,18 @@
 /* tslint:disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { uniqBy } from "lodash";
 import Container from "../Container/Container.Pages.styled";
 import StyledPeopleComponent from "./PeopleComponent.styled";
 import Label from "./Label";
 import PeopleFeed from "./PeopleFeed";
 import Filters from "../Filters";
-import {
-  IFullDataUser,
-  ISearchedUser,
-  ICountriesAndCities
-} from "../../../App.types";
+import { IFullDataUser, ISearchedUser } from "../../../App.types";
 import { Redirect } from "react-router-dom";
-import { httpPost } from "../../../backend/httpGet";
+import { sendToSocket } from "../../../backend/httpGet";
 
 interface IPeopleComponentProps {
   socket: SocketIOClient.Socket;
+  token: string;
   currentUser: IFullDataUser;
   userNameToSearchFriends?: string;
   contries: { id: number; name_en: string }[];
@@ -23,6 +21,7 @@ interface IPeopleComponentProps {
 }
 const PeopleComponent = ({
   socket,
+  token,
   currentUser,
   contries,
   cities,
@@ -37,88 +36,133 @@ const PeopleComponent = ({
   const [blocked, setBlocked] = useState(nullPeople);
   const [filters, setFilters] = useState(nullFilter);
   const [selectedTab, setSelectedTab] = useState(1);
+  const [onReadyToCallNextPage, setReadyToCallNextPage] = useState(false);
 
-  const sendToServer = (command: string, data: string) => {
-    httpPost(socket, command, data);
-  };
+  socket.on(
+    "User Searcher Response",
+    (
+      res: socket.ISocketResponse<
+        ISearchedUser[] | string,
+        api.models.IAvailableUserActions
+      >
+    ) => {
+      console.log(res.data.response);
 
-  socket.on("Search Peoples Response", (res: any) => {
-    if (res.result === "No Results Found") {
-      if (searchedPeoples.length < 1) setSearchedPeoples([]);
-    } else {
-      let newFeed = searchedPeoples.concat(res.result);
-      setSearchedPeoples(newFeed);
+      if (res.data.requestFor === "Search Peoples") {
+        if (res.status === "Not Found") {
+          if (searchedPeoples.length < 1) setSearchedPeoples([]);
+        }
+        if (res.status === "SQL Error") {
+          onError(res.data.response as string);
+        }
+        if (res.status === "OK") {
+          setSearchedPeoples(prevState =>
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
+          );
+        }
+        setReadyToCallNextPage(true);
+      }
+      if (res.data.requestFor === "Search Friends") {
+        if (res.status === "Not Found") {
+          if (friends.length < 1) setFriends([]);
+        }
+        if (res.status === "SQL Error") {
+          onError(res.data.response as string);
+        }
+        if (res.status === "OK") {
+          setFriends(prevState =>
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
+          );
+        }
+        setReadyToCallNextPage(true);
+      }
+      if (res.data.requestFor === "Search Invites") {
+        if (res.status === "Not Found") {
+          if (invites.length < 1) setInvites([]);
+        }
+        if (res.status === "SQL Error") {
+          onError((res.data.response as unknown) as string);
+        }
+        if (res.status === "OK") {
+          setInvites(prevState =>
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
+          );
+        }
+        setReadyToCallNextPage(true);
+      }
+      if (res.data.requestFor === "Search Blocked") {
+        if (res.status === "Not Found") {
+          if (blocked.length < 1) setBlocked([]);
+        }
+        if (res.status === "SQL Error") {
+          onError((res.data.response as unknown) as string);
+        }
+        if (res.status === "OK") {
+          setBlocked(prevState =>
+            uniqBy(
+              [...prevState, ...(res.data.response as ISearchedUser[])],
+              "idUsers"
+            )
+          );
+        }
+        setReadyToCallNextPage(true);
+      }
     }
-  });
+  );
 
-  socket.on("Search Friends Response", (res: any) => {
-    if (res.result === "Friends not found") {
-      if (friends.length < 1) setFriends([]);
-    } else {
-      let newFeed = friends.concat(res.result);
-      setFriends(newFeed);
-    }
-  });
-
-  socket.on("Search Invites Response", (res: any) => {
-    if (res.result === "Invites not found") {
-      if (invites.length < 1) setInvites([]);
-    } else {
-      let newFeed = invites.concat(res.result);
-      setInvites(newFeed);
-    }
-  });
-
-  socket.on("Search Blocked Response", (res: any) => {
-    if (res.result === "Blocks not found") {
-      if (blocked.length < 1) setBlocked([]);
-    } else {
-      let newFeed = blocked.concat(res.result);
-      setBlocked(newFeed);
-    }
-  });
-
-  //error => onError("Server Error, Please, try again")
-
-  const searchPeople = (
-    filter = filters,
-    preloadedPeople = searchedPeoples.length
-  ) => {
-    let postData =
-      '{ "operation": "Search Peoples", ' +
-      '"json": {' +
-      '"username": "' +
-      currentUser.username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    sendToServer("userSearcher.php", postData);
-  };
+  const searchPeople = useCallback(
+    (filter = filters, preloadedPeople = searchedPeoples.length) => {
+      sendToSocket<
+        api.models.ISearchUserRequest,
+        api.models.IAvailableUserActions
+      >(socket, {
+        operation: "User Searcher Request",
+        data: {
+          requestFor: "Search Peoples",
+          options: {
+            currentUser: currentUser.username,
+            searchedUser: currentUser.username,
+            filters: filter,
+            page: preloadedPeople
+          }
+        },
+        token
+      });
+      setReadyToCallNextPage(false);
+    },
+    [filters, searchedPeoples.length]
+  );
 
   const searchFriends = (
     username: string,
     filter = filters,
     preloadedPeople = friends.length
   ) => {
-    let postData =
-      '{ "operation": "Search Friends", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Friends",
+        options: {
+          currentUser: username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
   };
 
   const searchInvites = (
@@ -126,20 +170,22 @@ const PeopleComponent = ({
     filter = filters,
     preloadedPeople = invites.length
   ) => {
-    let postData =
-      '{ "operation": "Search Invites", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Invites",
+        options: {
+          currentUser: username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
   };
 
   const searchBlocked = (
@@ -147,20 +193,22 @@ const PeopleComponent = ({
     filter = filters,
     preloadedPeople = blocked.length
   ) => {
-    let postData =
-      '{ "operation": "Search Blocked", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    sendToServer("userSearcher.php", postData);
+    sendToSocket<
+      api.models.ISearchUserRequest,
+      api.models.IAvailableUserActions
+    >(socket, {
+      operation: "User Searcher Request",
+      data: {
+        requestFor: "Search Blocked",
+        options: {
+          currentUser: username,
+          searchedUser: currentUser.username,
+          filters: filter,
+          page: preloadedPeople
+        }
+      },
+      token
+    });
   };
 
   useEffect(() => {
@@ -284,6 +332,7 @@ const PeopleComponent = ({
               : []
           }
           onSelect={onSelect}
+          onReadyToCallNextPage={onReadyToCallNextPage}
           onCallNextPage={onCallNextPage}
         />
         <Filters

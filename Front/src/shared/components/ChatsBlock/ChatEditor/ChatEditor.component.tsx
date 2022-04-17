@@ -17,12 +17,7 @@ import {
   StyledEditor,
   EditorForm
 } from "./ChatEditor.styled";
-import {
-  IChat,
-  IMember,
-  IPreviewChat,
-  IFullDataUser
-} from "../../../../App.types";
+import { IFullDataUser } from "../../../../App.types";
 import Jimp from "jimp";
 import {
   ButtonBlock,
@@ -33,10 +28,10 @@ import defaultAvatar from "../../../../assets/img/DefaultPhoto.jpg";
 
 interface IEditorBlockProps {
   currentUser: IFullDataUser;
-  existChatData?: IPreviewChat;
-  peoples: IMember[];
+  existChatData?: api.models.IPreviewChat;
+  peoples: api.models.IMember[];
   onMembersInputChange: (username: string) => void;
-  saveUserChanges: (chat: IPreviewChat) => void;
+  saveUserChanges: (chat: api.models.IPreviewChat) => void;
   isDisabledToApply: (disabled: boolean) => void;
 }
 
@@ -52,7 +47,7 @@ const EditorBlock = forwardRef(
     }: IEditorBlockProps,
     ref
   ) => {
-    var nullRoom: IPreviewChat = {
+    var nullRoom: api.models.IPreviewChat = {
       chatID: "0",
       avatar: defaultAvatar,
       type: "private",
@@ -67,14 +62,16 @@ const EditorBlock = forwardRef(
         message: "quasi"
       }
     };
-    const initChat: IPreviewChat = existChatData ? existChatData : nullRoom;
+    const initChat: api.models.IPreviewChat = existChatData
+      ? existChatData
+      : nullRoom;
     const [chat, setChat] = useState(initChat);
 
     useEffect(() => {
       console.log(chat);
       if (chat.type === "private" && chat.members.length >= 2) {
         setChat(prevState => {
-          let newState: IPreviewChat = {
+          let newState: api.models.IPreviewChat = {
             avatar: prevState.avatar,
             name: prevState.name,
             chatID: prevState.chatID,

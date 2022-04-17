@@ -11,59 +11,45 @@ import {
   Online,
   Footer
 } from "./ChatPreview.styled";
-import { IPreviewChat, IMember } from "../../../../../App.types";
 import defaultAvatar from "../../../../../assets/img/DefaultPhoto.jpg";
 import { ReactComponent as MoreIcon } from "../../../../../assets/icons/more.svg";
 import DropDown from "./DropDownList";
 
 interface IChatPreviewProps {
-  item: IPreviewChat;
+  item: api.models.IPreviewChat;
   onEdit: () => void;
   onDelete: () => void;
 }
 
 const ChatPreview = ({ item, onEdit, onDelete }: IChatPreviewProps) => {
   const [visible, setVisible] = useState(false);
-  const getAge = (dob: string) => {
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var birth = new Date(dob);
-    var dobInThisYear = new Date(
-      today.getFullYear(),
-      birth.getMonth(),
-      birth.getDate()
-    );
-    var Age, title;
-
-    Age = today.getFullYear() - birth.getFullYear();
-    if (today < dobInThisYear) Age -= 1;
-
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Nov",
-      "Dec"
-    ];
-    title =
-      birth.getDate() +
-      " " +
-      months[birth.getMonth()] +
-      " " +
-      birth.getFullYear();
-    return <div title={title}>{Age} years</div>;
-  };
 
   let avatar = item.avatar !== null ? item.avatar : defaultAvatar;
 
+  const dropdownList = [
+    {
+      label: "Edit",
+      onClick: (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
+        event.stopPropagation();
+        onEdit();
+      }
+    },
+    {
+      label: "Delete",
+      onClick: (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
+        event.stopPropagation();
+        onDelete();
+      }
+    }
+  ];
+
   return (
-    <StyledChatPreview key={item.chatID}>
+    <StyledChatPreview
+      key={item.chatID}
+      onMouseLeave={() => {
+        setVisible(false);
+      }}
+    >
       <LeftBlock>
         <Avatar>
           <img src={avatar} key={item.chatID} alt="Pic is here" />
@@ -85,18 +71,14 @@ const ChatPreview = ({ item, onEdit, onDelete }: IChatPreviewProps) => {
           <Footer>No Messages here</Footer>
         )}
       </CenterBlock>
-      <RightBlock
-        onMouseLeave={() => {
-          setVisible(false);
-        }}
-      >
+      <RightBlock>
         <MoreIcon
           style={{ width: "15px", height: "15px" }}
           onMouseEnter={() => {
             setVisible(true);
           }}
         />
-        <DropDown visible={visible} onEdit={onEdit} onDelete={onDelete} />
+        <DropDown visible={visible} menuItemList={dropdownList} />
       </RightBlock>
     </StyledChatPreview>
   );

@@ -13,7 +13,6 @@ import {
   FieldName,
   ButtonBlock
 } from "../../EditorComponents/EditorComponents.styled";
-import { IPhotoBuffer } from "../../../../App.types";
 import { nullPhoto } from "../../../../App.reducer";
 
 interface IEditorItemsState {
@@ -22,7 +21,7 @@ interface IEditorItemsState {
 }
 
 interface IEditorItemsProps {
-  photoesUrls: IPhotoBuffer[];
+  photoesUrls: api.models.IPhotoBuffer[];
   pushUpUrl(name: string, blob: string): void;
   clearPhotoBuf(): void;
   onNameValueChanged(text: string): void;

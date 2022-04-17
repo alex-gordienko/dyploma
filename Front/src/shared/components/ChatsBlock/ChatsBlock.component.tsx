@@ -1,186 +1,416 @@
 /* tslint:disable */
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useImperativeHandle,
+  forwardRef
+} from "react";
 import Container from "../Container/Container.Pages.styled";
 import StyledChatsFeed from "./ChatsBlock.styled";
 import Label from "./Label";
-import {
-  IFullDataUser,
-  IPreviewChat,
-  IChat,
-  IMember,
-  ISearchedUser
-} from "../../../App.types";
-import { httpPost } from "../../../backend/httpGet";
+import { IFullDataUser, ISearchedUser } from "../../../App.types";
+import { sendToSocket } from "../../../backend/httpGet";
 import Chats from "./ChatsFeed";
 import Modal from "../Modal";
 import ChatMessenger from "./ChatMessenger";
 import ChatEditor from "./ChatEditor";
 import defaultAvatar from "../../../assets/img/DefaultPhoto.jpg";
+import { uniqBy } from "lodash";
+import { tokenGen } from "../utils/tokenGen";
 
 interface IChatsFeedProps {
   currentUser: IFullDataUser;
   socket: SocketIOClient.Socket;
   onError: (errorMessage: string) => void;
 }
-const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
-  const tokenGen = (length: number) => {
-    var rnd = "";
-    while (rnd.length < length)
-      rnd += Math.random()
-        .toString(36)
-        .substring(2);
-    return rnd.substring(0, length);
-  };
 
-  const token = tokenGen(12);
+const ChatsFeed = forwardRef(
+  ({ currentUser, socket, onError }: IChatsFeedProps, ref) => {
+    const token = tokenGen(12);
+    var nullMembers: api.models.IMember[] = [];
+    var nullFilter = { username: "", country: "", city: "", date: "" };
 
-  var nullChat: IPreviewChat[] = [
-    {
-      chatID: "0",
-      avatar: defaultAvatar,
-      type: "private",
-      name: "Test Chat",
-      lastMessage: {
-        id: 0,
-        id_author: 0,
-        isHiddenFromAuthor: true,
-        time: "2020-04-12 17:20:00",
-        type: "text",
-        message: "quasi"
+    const chatEditorRef = useRef<any>();
+    const [showModal, setShowModal] = useState(false);
+    const [selectedChatToEdit, setSelectedChatToEdit] = useState<
+      api.models.IPreviewChat
+    >();
+    const [chats, setChats] = useState<api.models.IPreviewChat[]>([]);
+    const [room, setRoom] = useState<api.models.IChat>();
+    const [isTyping, setIsTyping] = useState([{ room: "0", typing: [""] }]);
+    const [members, setMembers] = useState(nullMembers);
+    const [isDisabled, setIsDisabled] = useState(false);
+
+    useEffect(() => {
+      sendToSocket<{ user: string }, socket.AvailableMessengerRequestRoutes>(
+        socket,
+        {
+          operation: "Connect To Chat Page Request",
+          token,
+          data: {
+            requestFor: "Connect To Chat Page Request",
+            options: {
+              user: currentUser.username
+            }
+          }
+        }
+      );
+    }, [1]);
+
+    useImperativeHandle(ref, () => ({
+      loadAvailableUsers(
+        res: socket.ISocketResponse<
+          ISearchedUser[] | string,
+          api.models.IAvailableUserActions
+        >
+      ) {
+        if (res.data.requestFor === "Search Friends") {
+          if (res.status === "OK") {
+            let users: ISearchedUser[] = res.data.response as ISearchedUser[];
+            let chatMembers: api.models.IMember[] = users.map(user => {
+              return {
+                idUsers: user.idUsers,
+                username: user.username,
+                rating: user.rating,
+                avatar: user.avatar
+              };
+            });
+            setShowModal(true);
+            setMembers(prevState =>
+              uniqBy([...prevState, ...chatMembers], "idUsers")
+            );
+          }
+          if (res.status !== "OK") {
+            onError(res.data.response as string);
+          }
+        }
       },
-      members: []
-    }
-  ];
-  var nullRoom: IChat = {
-    chatID: "0",
-    avatar: defaultAvatar,
-    type: "private",
-    name: "Test chat",
-    members: [],
-    messages: []
-  };
-  var nullMembers: IMember[] = [];
-  var nullFilter = { username: "", country: "", city: "", date: "" };
 
-  const childRef = useRef<any>();
-  const [showModal, setShowModal] = useState(false);
-  const [selectedChatToEdit, setSelectedChatToEdit] = useState(nullChat[0]);
-  const [chats, setChats] = useState(nullChat);
-  const [room, setRoom] = useState(nullRoom);
-  const [isTyping, setIsTyping] = useState([{ room: "0", typing: [""] }]);
-  const [members, setMembers] = useState(nullMembers);
-  const [isDisabled, setIsDisabled] = useState(false);
+      setChatFeed(
+        res: socket.ISocketResponse<
+          api.models.IPreviewChat | string,
+          socket.AvailableMessengerResponseRoutes
+        >
+      ) {
+        console.log(res);
+        if (
+          res.operation === "Connect To Chat Page Response" &&
+          res.status === "OK"
+        ) {
+          setChats(prevState =>
+            uniqBy(
+              [...prevState, res.data.response as api.models.IPreviewChat],
+              "chatID"
+            )
+          );
+          setIsTyping(prevState => {
+            let newChats = prevState.concat({
+              room: (res.data
+                .response as api.models.IPreviewChat).chatID.toString(),
+              typing: [""]
+            });
+            return newChats;
+          });
+        }
+        if (res.status !== "OK") {
+          onError(res.data.response as string);
+        }
+        setShowModal(false);
+        setSelectedChatToEdit(null);
+      },
 
-  const sendToServer = (
-    socket: SocketIOClient.Socket,
-    command: string,
-    oldData: IMember[],
-    data: string
-  ) => {
-    httpPost(socket, command, data);
-  };
+      getChats(
+        res: socket.ISocketResponse<
+          api.models.IPreviewChat | string,
+          socket.AvailableMessengerResponseRoutes
+        >
+      ) {
+        console.log(res);
+        if (res.operation === "Create Chat Response" && res.status === "OK") {
+          setChats(prevState =>
+            uniqBy(
+              [...prevState, res.data.response as api.models.IPreviewChat],
+              "chatID"
+            )
+          );
+          setIsTyping(prevState => {
+            let newChats = prevState.concat({
+              room: (res.data
+                .response as api.models.IPreviewChat).chatID.toString(),
+              typing: [""]
+            });
+            return newChats;
+          });
+        }
+        if (res.status !== "OK") {
+          onError(res.data.response as string);
+        }
+        setShowModal(false);
+        setSelectedChatToEdit(null);
+      },
 
-  socket.on("userSearcher.php", (res: any) => {
-    if (res.operation === "Search Peoples") {
-      if (res.result === "No Results Found") {
-      } else {
-        let users: ISearchedUser[] = res.result;
-        let chatMembers: IMember[] = users.map(user => {
+      editChatsFeed(
+        res: socket.ISocketResponse<
+          api.models.IPreviewChat | string,
+          socket.AvailableMessengerResponseRoutes
+        >
+      ) {
+        console.log(res);
+        if (res.operation === "Edit Chat Response" && res.status === "OK") {
+          setChats(prevState => {
+            return prevState.map(chat => {
+              if (
+                chat.chatID ===
+                (res.data.response as api.models.IPreviewChat).chatID
+              )
+                return res.data.response as api.models.IPreviewChat;
+              else return chat;
+            });
+          });
+        }
+        if (res.status !== "OK") {
+          onError(res.data.response as string);
+        }
+        setShowModal(false);
+        setSelectedChatToEdit(null);
+      },
+
+      joinRoom(
+        res: socket.ISocketResponse<
+          api.models.IMessage[] | { username: string },
+          socket.AvailableMessengerResponseRoutes
+        >
+      ) {
+        console.log(res);
+        if (
+          res.data.requestFor === "Join Room Response" &&
+          res.status === "OK"
+        ) {
+          setRoom(prevState => ({
+            ...prevState,
+            messages: res.data.response as api.models.IMessage[]
+          }));
+        }
+        if (
+          res.data.requestFor === "Opponent Join Room Response" &&
+          res.status === "OK"
+        ) {
+          console.log(
+            `${
+              (res.data.response as { username: string }).username
+            } joined room`
+          );
+        }
+      },
+
+      isType(
+        res: socket.ISocketResponse<
+          { chatroom: string; username: string },
+          socket.AvailableMessengerResponseRoutes
+        >
+      ) {
+        console.log(res);
+        if (res.operation === "Chat Typing Response" && res.status === "OK") {
+          setIsTyping(prevState => {
+            return prevState.map(elem => {
+              if (
+                elem.room === res.data.response.chatroom &&
+                !elem.typing.includes(res.data.response.username)
+              ) {
+                return {
+                  room: elem.room,
+                  typing: elem.typing.concat(res.data.response.username)
+                };
+              } else return { room: elem.room, typing: elem.typing };
+            });
+          });
+          setTimeout(() => {
+            setIsTyping(prevState => {
+              return prevState.map(e => {
+                if (
+                  e.room === res.data.response.chatroom &&
+                  e.typing.includes(res.data.response.username)
+                ) {
+                  return { room: e.room, typing: [""] };
+                } else return { room: e.room, typing: e.typing };
+              });
+            });
+          }, 2000);
+        }
+      },
+
+      updateMessageFeed(
+        res: socket.ISocketResponse<
+          api.models.IMessage & { toRoom: string },
+          socket.AvailableMessengerResponseRoutes
+        >
+      ) {
+        console.log(res);
+        if (res.operation === "Send Message Response" && res.status === "OK") {
+          setRoom(prevState => {
+            if (res.data.response.toRoom === prevState.chatID) {
+              return {
+                ...prevState,
+                messages: prevState.messages.concat(res.data.response)
+              };
+            } else return prevState;
+          });
+
+          setChats(prevState => {
+            let newState = prevState.map(chat => {
+              if (chat.chatID.toString() === res.data.response.toRoom)
+                return { ...chat, lastMessage: res.data.response };
+              else return chat;
+            });
+            return newState;
+          });
+        }
+      },
+
+      onDeleteMessage(data: any) {
+        console.log(data);
+        setRoom(prevState => {
           return {
-            idUsers: user.idUsers,
-            username: user.username,
-            rating: user.rating,
-            avatar: user.avatar
+            chatID: prevState.chatID,
+            name: prevState.name,
+            avatar: prevState.avatar,
+            type: prevState.type,
+            members: prevState.members,
+            messages: prevState.messages.filter(
+              msg => !data.find((elem: any) => elem === msg.id)
+            )
           };
         });
-        setShowModal(true);
-        setMembers(chatMembers);
       }
-    }
-    //onError("Error connection to the server")
-  });
+    }));
 
-  const searchPeople = (
-    filter = nullFilter,
-    oldData = members,
-    preloadedPeople = 0
-  ) => {
-    let postData =
-      '{ "operation": "Search Peoples", ' +
-      '"json": {' +
-      '"username": "' +
-      currentUser.username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(filter) +
-      "," +
-      '"page": ' +
-      preloadedPeople +
-      " " +
-      "}}";
-    sendToServer(socket, "userSearcher.php", oldData, postData);
-  };
-
-  const saveChanges = (
-    command: "create chat" | "edit chat" | "delete chat",
-    chat: IPreviewChat
-  ) => {
-    let newChat: any = chat;
-    let currentMember: IMember = {
-      idUsers: currentUser.idUsers,
-      username: currentUser.username,
-      rating: currentUser.rating,
-      avatar: currentUser.avatar
+    const searchPeople = (
+      filter = nullFilter,
+      oldData = members,
+      preloadedPeople = 0
+    ) => {
+      sendToSocket<
+        api.models.ISearchUserRequest,
+        api.models.IAvailableUserActions
+      >(socket, {
+        operation: "User Searcher Request",
+        data: {
+          requestFor: "Search Friends",
+          options: {
+            currentUser: currentUser.username,
+            searchedUser: currentUser.username,
+            filters: filter,
+            page: preloadedPeople
+          }
+        },
+        token
+      });
     };
-    if (
-      !newChat.members.find(
-        (member: IMember) => member.idUsers === currentMember.idUsers
-      )
-    )
-      newChat.members.push(currentMember);
-    if (chat.avatar === defaultAvatar) newChat.avatar = null;
-    if (newChat.type === "private") newChat.name = tokenGen(12);
-    console.log(newChat);
-    socket.emit(command, { user: currentUser.username, newChat: newChat });
-  };
 
-  const getChats = async (data: any) => {
-    console.log(data);
-    if (data.chatlist) {
-      setChats(prevState => {
-        let newChats: IPreviewChat[] = prevState.concat(data.chatlist);
-        return newChats;
+    const saveChanges = (
+      command: socket.AvailableMessengerRequestRoutes,
+      chat: api.models.IPreviewChat
+    ) => {
+      let newChat: api.models.IPreviewChat = chat;
+      let currentMember: api.models.IMember = {
+        idUsers: currentUser.idUsers,
+        username: currentUser.username,
+        rating: currentUser.rating,
+        avatar: currentUser.avatar
+      };
+      if (
+        !newChat.members.find(
+          (member: api.models.IMember) =>
+            member.idUsers === currentMember.idUsers
+        )
+      ) {
+        newChat.members.push(currentMember);
+      }
+      if (chat.avatar === defaultAvatar) {
+        newChat.avatar = null;
+      }
+      if (newChat.type === "private") {
+        newChat.name = tokenGen(12);
+      }
+      console.log(newChat, command);
+      sendToSocket<
+        api.models.IPreviewChat,
+        socket.AvailableMessengerRequestRoutes
+      >(socket, {
+        operation: command,
+        token,
+        data: {
+          requestFor: command,
+          options: newChat
+        }
       });
-      setIsTyping(prevState => {
-        let newChats = prevState.concat({
-          room: data.chatlist.chatID.toString(),
-          typing: [""]
-        });
-        return newChats;
-      });
-    }
-    setShowModal(false);
-    setSelectedChatToEdit(nullChat[0]);
-  };
+    };
 
-  const editChatsFeed = async (data: any) => {
-    console.log(data);
-    if (data.chatlist) {
-      setChats(prevState => {
-        let newEditedChat: IPreviewChat = data.chatlist;
-        let newChats = prevState.map(chat => {
-          if (chat.chatID === newEditedChat.chatID) return newEditedChat;
-          else return chat;
-        });
-        return newChats;
+    const selectChatRoom = (chatroom: string) => {
+      setRoom(prevState => {
+        return {
+          chatID: chatroom,
+          name: chats.filter(chat => chat.chatID.toString() === chatroom)[0]
+            .name,
+          avatar: chats.filter(chat => chat.chatID.toString() === chatroom)[0]
+            .avatar
+            ? chats.filter(chat => chat.chatID.toString() === chatroom)[0]
+                .avatar
+            : defaultAvatar,
+          type: chats.filter(chat => chat.chatID.toString() === chatroom)[0]
+            .type,
+          members: chats.filter(chat => chat.chatID.toString() === chatroom)[0]
+            .members,
+          messages: []
+        };
       });
-    }
-    setShowModal(false);
-    setSelectedChatToEdit(nullChat[0]);
-  };
-  const joinRoom = (data: any) => {
-    console.log(data);
-    if (data.chatMessages) {
+      sendToSocket<
+        api.models.IJoinRoomRequest,
+        socket.AvailableMessengerRequestRoutes
+      >(socket, {
+        operation: "Join Room Request",
+        token,
+        data: {
+          requestFor: "Join Room Request",
+          options: {
+            user: currentUser.username,
+            chatroom: chatroom
+          }
+        }
+      });
+    };
+
+    const onTyping = (chatroom: string) => {
+      sendToSocket<
+        api.models.IJoinRoomRequest,
+        socket.AvailableMessengerRequestRoutes
+      >(socket, {
+        operation: "Chat Typing Request",
+        token,
+        data: {
+          requestFor: "Chat Typing Request",
+          options: {
+            user: currentUser.username,
+            chatroom: chatroom
+          }
+        }
+      });
+    };
+
+    const onDelete = (
+      chatroom: string,
+      justHideFromAuthor: boolean,
+      selectedMessageIDs: number[]
+    ) => {
+      console.log(
+        "Chat " +
+          chatroom +
+          ", command: delete, data: " +
+          selectedMessageIDs +
+          " just hide: " +
+          justHideFromAuthor
+      );
       setRoom(prevState => {
         return {
           chatID: prevState.chatID,
@@ -188,231 +418,102 @@ const ChatsFeed = ({ currentUser, socket, onError }: IChatsFeedProps) => {
           avatar: prevState.avatar,
           type: prevState.type,
           members: prevState.members,
-          messages: data.chatMessages
+          messages: prevState.messages.filter(
+            message => !selectedMessageIDs.find(selId => selId === message.id)
+          )
         };
       });
-    }
-  };
-
-  const isType = (data: any) => {
-    setIsTyping(prevState => {
-      let newState = prevState.map(elem => {
-        if (elem.room === data.room && !elem.typing.includes(data.typing)) {
-          return { room: elem.room, typing: elem.typing.concat(data.typing) };
-        } else return { room: elem.room, typing: elem.typing };
-      });
-      setTimeout(() => {
-        setIsTyping(prevState => {
-          let newState = prevState.map(e => {
-            if (e.room === data.room && e.typing.includes(data.typing)) {
-              return { room: e.room, typing: [""] };
-            } else return { room: e.room, typing: e.typing };
-          });
-          return newState;
-        });
-      }, 4000);
-      return newState;
-    });
-  };
-
-  const updateMessageFeed = (data: any) => {
-    console.log(data);
-    setRoom(prevState => {
-      if (data.toRoom === prevState.chatID) {
-        return {
-          chatID: prevState.chatID,
-          name: prevState.name,
-          avatar: prevState.avatar,
-          type: prevState.type,
-          members: prevState.members,
-          messages: prevState.messages.concat(data.newMessage)
-        };
-      } else return prevState;
-    });
-
-    setChats(prevState => {
-      let newState = prevState.map(chat => {
-        if (chat.chatID.toString() === data.toRoom)
-          return {
-            chatID: chat.chatID,
-            name: chat.name,
-            avatar: chat.avatar,
-            type: chat.type,
-            members: chat.members,
-            lastMessage: data.newMessage
-          };
-        else return chat;
-      });
-      return newState;
-    });
-  };
-  const onDeleteMessage = (data: any) => {
-    console.log(data);
-    setRoom(prevState => {
-      return {
-        chatID: prevState.chatID,
-        name: prevState.name,
-        avatar: prevState.avatar,
-        type: prevState.type,
-        members: prevState.members,
-        messages: prevState.messages.filter(
-          msg => !data.find((elem: any) => elem === msg.id)
-        )
-      };
-    });
-  };
-
-  socket.on("onTyping", isType);
-  socket.on("new chat", getChats);
-  socket.on("editing chat", editChatsFeed);
-  socket.on("selected room", joinRoom);
-  socket.on("new message", updateMessageFeed);
-  socket.on("onDeletion", onDeleteMessage);
-
-  const connectToChatServer = () => {
-    if (socket.emit("login", { user: currentUser.username })) {
-    } else onError("Chat server error, Please, try again");
-  };
-
-  const selectChatRoom = (chatroom: string) => {
-    setRoom(prevState => {
-      return {
-        chatID: chatroom,
-        name: chats.filter(chat => chat.chatID.toString() === chatroom)[0].name,
-        avatar: chats.filter(chat => chat.chatID.toString() === chatroom)[0]
-          .avatar
-          ? chats.filter(chat => chat.chatID.toString() === chatroom)[0].avatar
-          : defaultAvatar,
-        type: chats.filter(chat => chat.chatID.toString() === chatroom)[0].type,
-        members: chats.filter(chat => chat.chatID.toString() === chatroom)[0]
-          .members,
-        messages: []
-      };
-    });
-    if (
-      socket.emit("join room", {
+      socket.emit("delete", {
+        room: chatroom,
         user: currentUser.username,
-        chatroom: chatroom
-      })
-    ) {
-    } else onError("Chat server error, Please, try again");
-  };
+        justHide: justHideFromAuthor,
+        data: selectedMessageIDs
+      });
+    };
 
-  useEffect(() => {
-    connectToChatServer();
-  }, [1]);
+    const onSend = (chatroom: string, textMessage: string) => {
+      sendToSocket<
+        api.models.ISendMessageRequest,
+        socket.AvailableMessengerRequestRoutes
+      >(socket, {
+        operation: "Send Message Request",
+        token,
+        data: {
+          requestFor: "Send Message Request",
+          options: {
+            room: chatroom,
+            user: currentUser.username,
+            id_author: currentUser.idUsers,
+            data: textMessage,
+            type: "text"
+          }
+        }
+      });
+    };
 
-  const onTyping = (chatroom: string, username: string) => {
-    console.log("Chat " + chatroom + ", command: typing, data: " + username);
-    socket.emit("typing", { room: chatroom, user: currentUser.username });
-  };
-
-  const onDelete = (
-    chatroom: string,
-    justHideFromAuthor: boolean,
-    selectedMessageIDs: number[]
-  ) => {
-    console.log(
-      "Chat " +
-        chatroom +
-        ", command: delete, data: " +
-        selectedMessageIDs +
-        " just hide: " +
-        justHideFromAuthor
-    );
-    setRoom(prevState => {
-      return {
-        chatID: prevState.chatID,
-        name: prevState.name,
-        avatar: prevState.avatar,
-        type: prevState.type,
-        members: prevState.members,
-        messages: prevState.messages.filter(
-          message => !selectedMessageIDs.find(selId => selId === message.id)
-        )
-      };
-    });
-    socket.emit("delete", {
-      room: chatroom,
-      user: currentUser.username,
-      justHide: justHideFromAuthor,
-      data: selectedMessageIDs
-    });
-  };
-
-  const onSend = (chatroom: string, textMessage: string) => {
-    console.log("Chat " + chatroom + ", command: send, data: " + textMessage);
-    socket.emit("send", {
-      room: chatroom,
-      user: currentUser.username,
-      id_author: currentUser.idUsers,
-      data: textMessage,
-      type: "text"
-    });
-  };
-
-  return (
-    <Container>
-      <Label
-        onCreate={() => {
-          searchPeople();
-        }}
-      >
-        Your chats
-      </Label>
-      <StyledChatsFeed>
-        <Chats
-          data={chats}
-          onSelect={selectChatRoom}
-          onEdit={e => {
-            setSelectedChatToEdit(e);
+    return (
+      <Container>
+        <Label
+          onCreate={() => {
             searchPeople();
           }}
-          onDelete={e => console.log(e)}
-        />
-        <ChatMessenger
-          currentUser={currentUser}
-          isTyping={isTyping}
-          data={room}
-          onTyping={onTyping}
-          onSend={onSend}
-          onDelete={onDelete}
-        />
-      </StyledChatsFeed>
-      <Modal
-        show={showModal}
-        name="Create/Edit chat"
-        type="editing"
-        isDisabled={isDisabled}
-        onOK={() => {
-          childRef.current.callSave();
-        }}
-        onCancel={() => {
-          setShowModal(false);
-          setSelectedChatToEdit(nullChat[0]);
-        }}
-      >
-        <ChatEditor
-          ref={childRef}
-          currentUser={currentUser}
-          existChatData={
-            selectedChatToEdit.chatID !== "0" ? selectedChatToEdit : undefined
-          }
-          peoples={members}
-          onMembersInputChange={e =>
-            searchPeople({ username: e, country: "", city: "", date: "" })
-          }
-          isDisabledToApply={e => setIsDisabled(e)}
-          saveUserChanges={e =>
-            saveChanges(
-              selectedChatToEdit.chatID !== "0" ? "edit chat" : "create chat",
-              e
-            )
-          }
-        />
-      </Modal>
-    </Container>
-  );
-};
+        >
+          Your chats
+        </Label>
+        <StyledChatsFeed>
+          <Chats
+            data={chats}
+            onSelect={selectChatRoom}
+            onEdit={e => {
+              setSelectedChatToEdit(e);
+              searchPeople();
+            }}
+            onDelete={e => console.log(e)}
+          />
+          <ChatMessenger
+            currentUser={currentUser}
+            isTyping={isTyping}
+            data={room}
+            onTyping={onTyping}
+            onSend={onSend}
+            onDelete={onDelete}
+          />
+        </StyledChatsFeed>
+        <Modal
+          show={showModal}
+          name="Create/Edit chat"
+          type="editing"
+          isDisabled={isDisabled}
+          onOK={() => {
+            chatEditorRef.current.callSave();
+          }}
+          onCancel={() => {
+            setShowModal(false);
+            setSelectedChatToEdit(null);
+          }}
+        >
+          <ChatEditor
+            ref={chatEditorRef}
+            currentUser={currentUser}
+            existChatData={selectedChatToEdit ?? undefined}
+            peoples={members}
+            onMembersInputChange={e =>
+              searchPeople({ username: e, country: "", city: "", date: "" })
+            }
+            isDisabledToApply={e => setIsDisabled(e)}
+            saveUserChanges={e =>
+              saveChanges(
+                selectedChatToEdit.chatID !== "0"
+                  ? "Edit Chat Request"
+                  : "Create Chat Request",
+                e
+              )
+            }
+          />
+        </Modal>
+      </Container>
+    );
+  }
+);
 
 export default ChatsFeed;

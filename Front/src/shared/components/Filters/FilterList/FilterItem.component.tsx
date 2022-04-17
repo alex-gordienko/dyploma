@@ -7,7 +7,6 @@ import AutoComplete from "../../EditorComponents/EditorAutoComplete";
 
 import { FilterData } from "./FilterItem.constants";
 import FilterBlock from "./FilterItem.styled";
-import { ICountriesAndCities } from "../../../../App.types";
 
 interface IFilterItemProps {
   contries: { id: number; name_en: string }[];

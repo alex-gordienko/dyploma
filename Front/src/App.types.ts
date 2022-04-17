@@ -27,28 +27,19 @@ export interface ILogOutAction {
 }
 
 export interface IGetPostsAction {
-  posts: IPost[];
+  posts: api.models.IPost[];
   userName: string | undefined;
   type: "getPosts";
 }
 
 export interface IGetCountriesAndCitiesAction {
-  countries: ICountriesAndCities;
+  countries: api.models.ICountriesAndCities;
   type: "getCountriesAndCities";
 }
 
-export interface ICreatePostAction {
-  type: "CreatePost";
-  newPost: IPost;
-}
-
-export interface IEditPostAction {
-  type: "EditExistPost";
-  editedPost: IPost;
-}
 export interface ISetEditedPostAction {
   type: "CheckPost";
-  searchedPost: IPost | "new" | "No Results Found.";
+  searchedPost: api.models.IPost | "new" | "No Results Found.";
 }
 
 export interface IProfileAction {
@@ -63,10 +54,10 @@ export interface IAppState {
   progressMessage: string;
   errorMessage: string;
   isLogin: boolean;
-  country_city: ICountriesAndCities;
+  country_city: api.models.ICountriesAndCities;
   user: IFullDataUser;
-  searchedUserPosts: IPost[];
-  editedPost: IPost | "new" | "No Results Found.";
+  searchedUserPosts: api.models.IPost[];
+  editedPost: api.models.IPost | "new" | "No Results Found.";
 }
 
 export interface IFullDataUser {
@@ -75,8 +66,8 @@ export interface IFullDataUser {
   Birthday: string;
   FirstName: string;
   LastName: string;
-  Status: string;
-  avatar: string;
+  Status: string | null;
+  avatar: string | null;
   email: string;
   regDate: string;
   isBanned: boolean;
@@ -100,18 +91,6 @@ export interface IUserPosition {
     lat: number;
     lng: number;
   };
-}
-
-export interface ICountriesAndCities {
-  country: Array<{
-    id: number;
-    name_en: string;
-  }>;
-  city: Array<{
-    id: number;
-    country_id: number;
-    name_en: string;
-  }>;
 }
 
 export interface IFilterProperties {
@@ -143,40 +122,6 @@ export interface ISearchedUser {
   username: string;
 }
 
-export interface IPost {
-  description: string;
-  date: string;
-  Name: string;
-  idPost: number;
-  isPrivate: number;
-  position: {
-    lat: number;
-    lng: number;
-  };
-  rating: {
-    likes: number;
-    dislikes: number;
-    isLikedByMe: boolean;
-    isDislikedByMe: boolean;
-  };
-  type: number;
-  username: string;
-  idUser: number;
-  photoes: IPhotoBuffer[];
-}
-
-export interface INewPost {
-  name: string;
-  isPrivate: boolean;
-  description: string;
-  photoes: IPhotoBuffer[];
-  position: {
-    lat: number;
-    lng: number;
-  };
-  dateTime: string;
-}
-
 export interface IComment {
   content: string;
   date: string;
@@ -184,43 +129,4 @@ export interface IComment {
   userAvatar?: string;
   userRating: number;
   rating?: number;
-}
-
-export interface IPhotoBuffer {
-  name: string;
-  blob: string;
-}
-
-export interface IChat {
-  chatID: string;
-  avatar: string;
-  type: string;
-  name: string;
-  messages: IMessage[];
-  members: IMember[];
-}
-
-export interface IMember {
-  idUsers: number;
-  username: string;
-  rating: number;
-  avatar: string;
-}
-
-export interface IMessage {
-  id: number;
-  id_author: number;
-  isHiddenFromAuthor: boolean;
-  time: string;
-  type: "text" | "postredirect";
-  message: string | IPost;
-}
-
-export interface IPreviewChat {
-  avatar: string;
-  chatID: string;
-  type: string;
-  name: string;
-  lastMessage: IMessage;
-  members: IMember[];
 }

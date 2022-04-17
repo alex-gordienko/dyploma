@@ -2,10 +2,14 @@
 import { styled } from "../../../../styles/styled";
 
 export default styled.div`
-  width: 56%;
-  max-height: inherit;
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
   font-family: ${(props: any) => props.theme.fontFamily.body};
+  padding: 10px;
 `;
 
 export const Avatar = styled.div`
@@ -31,9 +35,13 @@ export const Chatname = styled.div`
   }
 `;
 
-export const MessageContainer = styled.div<{ myMessage: boolean }>`
+export const MessageContainer = styled.div<{
+  myMessage: boolean;
+  isSelected: boolean;
+}>`
   width: 90%;
-  background: transparent;
+  background: ${props =>
+    props.isSelected ? props.theme.colors.secondaryHover : "transparent"};
 
   font-family: ${(props: any) => props.theme.fontFamily.body};
   text-align: ${props => (props.myMessage ? "right" : "left")};
@@ -105,11 +113,12 @@ export const MessangerHeader = styled.div`
 `;
 
 export const MessengerContentBlock = styled.div`
+  margin-top: 10px;
   padding-top: 5px;
   box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.5),
     inset -2px -2px 5px rgba(0, 0, 0, 0.5);
   height: 100%;
-  max-height: 58vh;
+  width: 100%;
   overflow-y: auto;
   ::-webkit-scrollbar {
     width: 0px;
@@ -119,5 +128,6 @@ export const MessengerContentBlock = styled.div`
 `;
 
 export const MessengerFooterBlock = styled.div`
+  margin-top: 10px;
   width: 100%;
 `;

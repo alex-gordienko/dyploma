@@ -1,195 +1,162 @@
 /* tslint:disable */
-import React, { useState, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useImperativeHandle,
+  forwardRef,
+  useEffect
+} from "react";
 import Label from "./PageLabel";
-import PostsController from "./Label";
+
 import UserDataBlock from "./UserDataBlock";
 import UserFriends from "./UserFriends";
-import SubContainer from "../Container/Container.Pages.styled";
-
-import { StyledEditorBlock } from "./ProfileViewer.styled";
 import { SubHeader } from "../EditorComponents/EditorComponents.styled";
-import { IFullDataUser, ISearchedUser, IPost } from "../../../App.types";
+import { IFullDataUser, ISearchedUser } from "../../../App.types";
 import { Redirect, NavLink } from "react-router-dom";
-import BodyBlock from "../BodyBlock";
-import { httpPost } from "../../../backend/httpGet";
-import defaultAvatar from "../../../assets/img/DefaultPhoto.jpg";
+import { sendToSocket } from "../../../backend/httpGet";
+import Preloader from "../Preloader";
+import PostsController from "./Label";
 
 interface IProfileViewerProps {
   socket: SocketIOClient.Socket;
+  token: string;
   username: string | undefined;
   editable: boolean;
   currentUser: IFullDataUser;
+  selectedTab: number;
+  TabSelection: (mode: "public" | "private") => void;
   onError: (message: string) => void;
 }
 
-const ProfileViewer = ({
-  socket,
-  username,
-  editable,
-  currentUser,
-  onError
-}: IProfileViewerProps) => {
-  const [redirect, setRedirect] = useState(false);
-  var user: ISearchedUser = {
-    Country: "",
-    City: "",
-    Birthday: "",
-    FirstName: "",
-    LastName: "",
-    Status: "",
-    avatar: defaultAvatar,
-    idUsers: 0,
-    lastOnline: "",
-    regDate: "",
-    isBanned: false,
-    isConfirm: false,
-    isOnline: false,
-    isMyFriend: false,
-    isSubscribition: false,
-    isBlocked: false,
-    phone: 0,
-    rating: 0,
-    username: ""
-  };
-  var nullFilter = { username: "", country: "", city: "", date: "" };
-  const nullPosts: IPost[] = [];
-  const [userProfile, setUserProfile] = useState<ISearchedUser>(user);
-  const [friends, setFriends] = useState([user]);
-  const [userPost, setUserPost] = useState(nullPosts);
-  const [privatePosts, setPrivatePosts] = useState(nullPosts);
-  const [feed, setFeed] = useState(nullPosts);
-  const [selectedTab, setSelectedTab] = useState(1);
+const ProfileViewer = forwardRef(
+  (
+    {
+      socket,
+      token,
+      username,
+      editable,
+      currentUser,
+      selectedTab,
+      TabSelection,
+      onError
+    }: IProfileViewerProps,
+    ref
+  ) => {
+    const [redirect, setRedirect] = useState(false);
+    var nullFilter = { username: "", country: "", city: "", date: "" };
+    const [userProfile, setUserProfile] = useState<ISearchedUser>();
+    const [friends, setFriends] = useState<ISearchedUser[]>([]);
 
-  const sendToServer = (command: string, data: string) => {
-    httpPost(socket, command, data);
-  };
-
-  socket.on("Search User Response", (res: any) => {
-    if (res.result === "User not found. Try again") {
-    } else setUserProfile(res.result);
-  });
-
-  socket.on("Search Friends Response", (res: any) => {
-    if (res.result === "Friends not found") {
-    } else setFriends(res.result);
-  });
-
-  socket.on("Get User Public Posts Response", (res: any) => {
-    if (res.result === "No Results Found.") {
-      if (userPost.length > 0 && userPost[0].username !== username) {
-        setUserPost([]);
-        setFeed([]);
-      }
-    } else {
-      if (userPost.length > 0) {
-        if (userPost[0].username !== username) {
-          setUserPost(res.result);
-          setFeed(res.result);
-        }
+    useEffect(() => {
+      if (username) {
+        console.log("UserData is null. Call function");
+        setUserProfile(null);
+        searchProfile(username);
+        searchFriends(username);
       } else {
-        let newFeed = userPost.concat(res.result);
-        setUserPost(newFeed);
-        setFeed(newFeed);
+        console.log("Username Error. Loading your profile");
+        setUserProfile(null);
+        searchProfile();
+        searchFriends();
       }
-    }
-  });
+    }, [username]);
 
-  socket.on("Get User Private Posts Response", (res: any) => {
-    if (res.result === "No Results Found.") {
-      if (privatePosts.length > 1) setPrivatePosts([]);
-    } else {
-      let newFeed = privatePosts.concat(res.result);
-      setPrivatePosts(newFeed);
-    }
-  });
+    useImperativeHandle(ref, () => ({
+      loadFriendList(
+        res: socket.ISocketResponse<
+          string | ISearchedUser | ISearchedUser[],
+          api.models.IAvailableUserActions
+        >
+      ) {
+        if (res.data.requestFor === "Search User") {
+          if (res.status === "OK") {
+            console.log(res.data.response);
+            setUserProfile(res.data.response as ISearchedUser);
+          } else {
+            onError(res.data.response as string);
+          }
+        }
+        if (res.data.requestFor === "Search Friends") {
+          if (res.status === "OK") {
+            console.log(res.data.response);
+            setFriends(res.data.response as ISearchedUser[]);
+          }
+        }
+      }
+    }));
 
-  //error => onError("Error connection to the server")
+    const searchProfile = (username = currentUser.username) => {
+      sendToSocket<
+        api.models.ISearchUserRequest,
+        api.models.IAvailableUserActions
+      >(socket, {
+        operation: "User Searcher Request",
+        data: {
+          requestFor: "Search User",
+          options: {
+            currentUser: currentUser.username,
+            searchedUser: username,
+            filters: nullFilter,
+            page: 0
+          }
+        },
+        token
+      });
+    };
 
-  const searchProfile = (username = currentUser.username) => {
-    //console.log("Searching: ", username);
-    const postData =
-      '{ "operation": "Search User"' +
-      ', "json": {' +
-      '"currentUser": "' +
-      currentUser.username +
-      '",' +
-      '"searchedUser": "' +
-      username +
-      '"' +
-      "}}";
-    sendToServer("userSearcher.php", postData);
-  };
+    const searchFriends = (username = currentUser.username) => {
+      sendToSocket<
+        api.models.ISearchUserRequest,
+        api.models.IAvailableUserActions
+      >(socket, {
+        operation: "User Searcher Request",
+        data: {
+          requestFor: "Search Friends",
+          options: {
+            currentUser: currentUser.username,
+            searchedUser: username,
+            filters: nullFilter,
+            page: 0
+          }
+        },
+        token
+      });
+    };
 
-  const searchFriends = (username = currentUser.username) => {
-    let postData =
-      '{ "operation": "Search Friends", ' +
-      '"json": {' +
-      '"username": "' +
-      username +
-      '",' +
-      '"filters": ' +
-      JSON.stringify(nullFilter) +
-      "," +
-      '"page": 0 ' +
-      "}}";
-    sendToServer("userSearcher.php", postData);
-  };
+    const getRedirect = () => {
+      if (redirect) {
+        return <Redirect to={"/edit"} />;
+      }
+    };
 
-  useEffect(() => {
-    if (username) {
-      console.log("UserData is null. Call function");
-      searchProfile(username);
-      searchFriends(username);
-    } else {
-      console.log("Username Error. Loading your profile");
-      searchProfile();
-      searchFriends();
-    }
-  }, [username]);
+    const handleLabelCommand = () => {
+      setRedirect(true);
+    };
 
-  useEffect(() => {
-    if (selectedTab === 1) setFeed(userPost);
-    else if (selectedTab === 2) setFeed(privatePosts);
-  }, [selectedTab]);
-
-  const getRedirect = () => {
-    if (redirect) {
-      return <Redirect to={"/edit"} />;
-    }
-  };
-
-  const TabSelection = (mode: "public" | "private") => {
-    console.log(mode);
-    setSelectedTab(mode === "public" ? 1 : mode === "private" ? 2 : 0);
-  };
-
-  const handleLabelCommand = () => {
-    setRedirect(true);
-  };
-  return userProfile ? (
-    <SubContainer>
-      {getRedirect()}
-      <Label
-        rating={userProfile.rating}
-        editable={editable}
-        labelCommand={handleLabelCommand}
-        status={userProfile.Status}
-      >
-        {userProfile.username}
-      </Label>
-      <StyledEditorBlock>
+    return userProfile ? (
+      <>
+        {getRedirect()}
+        <Label
+          rating={userProfile.rating}
+          editable={editable}
+          labelCommand={handleLabelCommand}
+          status={userProfile.Status}
+        >
+          {userProfile.username}
+        </Label>
+        <PostsController
+          isAnotherUser={username === currentUser.username ? false : true}
+          onSelect={TabSelection}
+          selectedCaption={selectedTab}
+        />
         <div className="profile-block">
           <SubHeader>Profile</SubHeader>
           <UserDataBlock
             currentUser={currentUser}
             isMyFriend={
-              friends.length > 0
-                ? friends.find(
-                    friend => friend.username === currentUser.username
-                  )
-                  ? true
-                  : false
-                : false
+              friends.length > 0 &&
+              Boolean(
+                friends.find(friend => friend.username === currentUser.username)
+              )
             }
             userData={userProfile}
           />
@@ -200,24 +167,11 @@ const ProfileViewer = ({
           </SubHeader>
           <UserFriends friends={friends} />
         </div>
-        <div className="posts-block">
-          <PostsController
-            isAnotherUser={username === currentUser.username ? false : true}
-            onSelect={TabSelection}
-            selectedCaption={selectedTab}
-          />
-          <BodyBlock
-            mode="Profile"
-            socket={socket}
-            isAnotherUser={username}
-            isPrivatePosts={selectedTab === 1 ? false : true}
-            currentUser={currentUser}
-            onError={onError}
-          />
-        </div>
-      </StyledEditorBlock>
-    </SubContainer>
-  ) : null;
-};
+      </>
+    ) : (
+      <Preloader message="Loading Profile Data..." />
+    );
+  }
+);
 
 export default ProfileViewer;

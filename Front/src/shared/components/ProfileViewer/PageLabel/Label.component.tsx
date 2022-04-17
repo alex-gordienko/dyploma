@@ -1,6 +1,6 @@
 /* tslint:disable */
 import React from "react";
-import { Content, Status } from "./Label.styled";
+import { Content, Status, ProfileEditButton } from "./Label.styled";
 import { LabelBlock } from "../../EditorComponents/EditorComponents.styled";
 import { ButtonBlock } from "../../EditorComponents/EditorComponents.styled";
 import { NavLink } from "react-router-dom";
@@ -32,11 +32,13 @@ class Label extends React.PureComponent<ILabelProps> {
           </div>
         </Content>
         <Status>{status ? <div>&laquo;{status}&raquo;</div> : null}</Status>
-        <ButtonBlock>
-          <button className="label-button" onClick={this.handleEditClick}>
-            Edit
-          </button>
-        </ButtonBlock>
+        <ProfileEditButton>
+          <ButtonBlock>
+            <button className="label-button" onClick={this.handleEditClick}>
+              Edit
+            </button>
+          </ButtonBlock>
+        </ProfileEditButton>
       </LabelBlock>
     ) : (
       <LabelBlock>

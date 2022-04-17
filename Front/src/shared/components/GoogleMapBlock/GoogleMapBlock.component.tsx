@@ -2,12 +2,12 @@
 import React from "react";
 import GoogleMapComponent from "./GoogleMap";
 import StyledMapBlock from "./GoogleMapBlock.styled";
-import { IPost, IUserPosition } from "../../../App.types";
+import { IUserPosition } from "../../../App.types";
 
 interface IGoogleMapBlockPostProps {
   mode: "Posts";
-  data?: IPost[];
-  aloneMarker?: IPost;
+  data?: api.models.IPost[];
+  aloneMarker?: api.models.IPost;
   selectedMarker?: (e: number) => void;
   newPosition?: (lat: number, lng: number) => void;
 }

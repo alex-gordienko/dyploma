@@ -51,7 +51,7 @@ export const getStateFromStorage = (name: "savedUser") => {
   try {
     const result = cookie.get(name);
     console.log("From cookie '" + name + "': ", result);
-    if (result === null || result === undefined) {
+    if (!result) {
       return JSON.parse(nullUser);
     } else {
       return JSON.parse(result);
@@ -61,6 +61,8 @@ export const getStateFromStorage = (name: "savedUser") => {
     return nullUser;
   }
 };
+
+export const checkIfUserHasCookies = () => Boolean(cookie.get("savedUser"));
 
 export const deleteStateFromStorage = (name: "savedUser") => {
   try {

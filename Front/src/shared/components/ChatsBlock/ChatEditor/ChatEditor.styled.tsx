@@ -6,6 +6,7 @@ export const StyledEditor = styled.div`
   margin: 10px auto;
   flex-flow: row;
   max-width: 100vh;
+  justify-content: center;
 `;
 
 export const PhotoBlock = styled.div`
@@ -24,6 +25,8 @@ export const Photo = styled.img`
 
 export const EditorForm = styled.div`
   flex-flow: wrap;
+  display: flex;
+  flex-flow: column;
   font-family: ${props => props.theme.fontFamily.body};
   font-size: ${props => props.theme.fontSize.body};
   justify-content: space-between;

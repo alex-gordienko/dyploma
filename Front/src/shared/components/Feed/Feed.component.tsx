@@ -4,12 +4,12 @@ import StyledFeed from "./Feed.styled";
 import Post from "./Post";
 import Preloader from "../Preloader";
 import { FeedList } from "./Feed.constants";
-import { IPost, IComment } from "../../../App.types";
+import { IComment } from "../../../App.types";
 import { ButtonBlock } from "../EditorComponents/EditorComponents.styled";
 
 interface ILowFeedProps {
   type: "Preview";
-  data: IPost[];
+  data: api.models.IPost[];
   currentUser: number;
   onReadyToCallNextPage: boolean;
   onSelect: (value: number) => void;
@@ -20,7 +20,7 @@ interface ILowFeedProps {
 
 interface IFullFeedProps {
   type: "FullPost";
-  data?: IPost;
+  data?: api.models.IPost;
   comments: IComment[];
   currentUser: number;
   onSelect: (value: number) => void;
@@ -34,15 +34,15 @@ const Feed = (mode: IFeedProps) => {
   const lastPostElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (lastPostElement.current) {
-      var observer = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) {
-          console.log("Auto call next page");
-          if (mode.type === "Preview" && mode.data.length > 1) {
-            mode.onCallNextPage(Array.from(mode.data, post => post.idPost));
-          }
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        console.log("Auto call next page");
+        if (mode.type === "Preview" && mode.data.length > 1) {
+          mode.onCallNextPage(Array.from(mode.data, post => post.idPost));
         }
-      });
+      }
+    });
+    if (lastPostElement.current) {
       observer.observe(lastPostElement.current);
       return () => {
         observer.disconnect();

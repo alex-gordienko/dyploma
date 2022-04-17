@@ -14,7 +14,9 @@ const StyledMenu = styled.nav`
     font-size: ${(props: any) => props.theme.fontSize.body};
     color: ${(props: any) => props.theme.colors.header.primaryText};
     text-decoration: none;
+    text-align: center;
     width: max-content;
+    min-width: 120px;
     margin: auto;
     line-height: 2;
     position: relative;

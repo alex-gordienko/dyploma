@@ -5,15 +5,9 @@ import {
   ILogInAction,
   ISaveUserDataAction,
   ILogOutAction,
-  IGetPostsAction,
-  INewPost,
-  ICreatePostAction,
-  IEditPostAction,
   ISetEditedPostAction,
   IProfileAction,
   IFullDataUser,
-  IPost,
-  ICountriesAndCities,
   IGetCountriesAndCitiesAction,
   ISearchedUser
 } from "./App.types";
@@ -43,24 +37,14 @@ const logOut = (): ILogOutAction => ({
 });
 
 const getCountriesAndCities = (
-  countries: ICountriesAndCities
+  countries: api.models.ICountriesAndCities
 ): IGetCountriesAndCitiesAction => ({
   countries,
   type: "getCountriesAndCities"
 });
 
-const createPost = (newPost: IPost): ICreatePostAction => ({
-  newPost,
-  type: "CreatePost"
-});
-
-const editPost = (editedPost: IPost): IEditPostAction => ({
-  editedPost,
-  type: "EditExistPost"
-});
-
 const setEditedPost = (
-  searchedPost: IPost | "new" | "No Results Found."
+  searchedPost: api.models.IPost | "new" | "No Results Found."
 ): ISetEditedPostAction => ({
   searchedPost,
   type: "CheckPost"
@@ -68,11 +52,6 @@ const setEditedPost = (
 
 const editProfile = (userData: IFullDataUser): IProfileAction => ({
   type: "EditUser",
-  userData
-});
-
-const createProfile = (userData: IFullDataUser): IProfileAction => ({
-  type: "CreateUser",
   userData
 });
 
@@ -88,9 +67,6 @@ export {
   saveUserDataToCookie,
   logOut,
   getCountriesAndCities,
-  createPost,
-  editPost,
   setEditedPost,
-  editProfile,
-  createProfile
+  editProfile
 };

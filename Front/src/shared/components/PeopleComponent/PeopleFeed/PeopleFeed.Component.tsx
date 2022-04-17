@@ -12,6 +12,7 @@ interface IFeedProps {
   data: ISearchedUser[];
   currentUser: IFullDataUser;
   onSelect: (value: string) => void;
+  onReadyToCallNextPage: boolean;
   onCallNextPage: () => void;
 }
 
@@ -19,18 +20,19 @@ const PeopleFeed = ({
   data,
   currentUser,
   onSelect,
+  onReadyToCallNextPage,
   onCallNextPage
 }: IFeedProps) => {
   const lastPostElement = useRef<HTMLDivElement>(null);
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      console.log("Visible");
+      if (data.length > 1) onCallNextPage();
+    }
+  });
 
   useEffect(() => {
-    if (lastPostElement.current) {
-      var observer = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) {
-          console.log("Visible");
-          if (data.length > 1) onCallNextPage();
-        }
-      });
+    if (onReadyToCallNextPage && lastPostElement.current) {
       observer.observe(lastPostElement.current);
       return () => {
         observer.disconnect();
@@ -52,11 +54,17 @@ const PeopleFeed = ({
           </div>
         );
       })}
-      <ButtonBlock>
-        <div ref={lastPostElement} onClick={loadMore} className="label-button">
-          Load More
-        </div>
-      </ButtonBlock>
+      {onReadyToCallNextPage ? (
+        <ButtonBlock>
+          <div
+            ref={lastPostElement}
+            onClick={loadMore}
+            className="label-button"
+          >
+            Load More
+          </div>
+        </ButtonBlock>
+      ) : null}
     </StyledFeed>
   ) : (
     <StyledFeed>No Results Found, dude</StyledFeed>

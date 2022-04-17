@@ -1,407 +1,409 @@
 /* tslint:disable */
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import Container from "../Container/Container.Pages.styled";
-import AdaptiveBodyBlock, { Delimeter, Border } from "./BodyBlock.styled";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useImperativeHandle,
+  forwardRef
+} from "react";
+import { uniqBy } from "lodash";
+import AdaptiveBodyBlock from "./BodyBlock.styled";
 import PageConstructor from "../../PageConstructor/PageConstructor";
 
 import GoogleMapBlock from "../GoogleMapBlock";
 import Feed from "../Feed";
-import { IPost, IComment, IFullDataUser } from "../../../App.types";
-import { httpPost } from "../../../backend/httpGet";
+import { IComment, IFullDataUser } from "../../../App.types";
+import { sendToSocket } from "../../../backend/httpGet";
+import { formatDate } from "../utils/generateData";
+
+const isCommentData = (data: any): data is IComment[] =>
+  Object.prototype.toString.call(data) === "[object Array]" &&
+  data[0].content !== undefined;
 
 interface IBodyBlockProps {
   mode: "Main Page" | "Profile";
   socket: SocketIOClient.Socket;
+  token: string;
   currentUser: IFullDataUser;
   isAnotherUser?: string;
   isPrivatePosts?: boolean;
   onError: (message: string) => void;
 }
-const BodyBlock = ({
-  currentUser,
-  mode,
-  socket,
-  isAnotherUser,
-  isPrivatePosts,
-  onError
-}: IBodyBlockProps) => {
-  var nullFilter = { username: "", country: "", city: "", date: "" };
-  const [globalPostsFeed, setGlobalPostsFeed] = useState<IPost[]>([]);
-  const [userPublicPostFeed, setPublicUserPostFeed] = useState<IPost[]>([]);
-  const [userPrivatePostFeed, setPrivateUserPostFeed] = useState<IPost[]>([]);
-  const [onReadyToCallNextPage, setReadyToCallNextPage] = useState(false);
+const BodyBlock = forwardRef(
+  (
+    {
+      currentUser,
+      mode,
+      socket,
+      token,
+      isAnotherUser,
+      isPrivatePosts,
+      onError
+    }: IBodyBlockProps,
+    ref
+  ) => {
+    var nullFilter = { username: "", country: "", city: "", date: "" };
+    const [globalPostsFeed, setGlobalPostsFeed] = useState<api.models.IPost[]>(
+      []
+    );
+    const [userPublicPostFeed, setPublicUserPostFeed] = useState<
+      api.models.IPost[]
+    >([]);
+    const [userPrivatePostFeed, setPrivateUserPostFeed] = useState<
+      api.models.IPost[]
+    >([]);
+    const [onReadyToCallNextPage, setReadyToCallNextPage] = useState(false);
+    const [selectedPostID, setSelectedPostID] = useState(0);
+    const [comments, setComments] = useState<IComment[]>([]);
 
-  const [selectedPostID, setSelectedPostID] = useState(0);
-  const [comments, setComments] = useState<IComment[]>([]);
+    const bodyBlockRef = useRef<HTMLDivElement>(null);
 
-  //Ссылка для таймера (нужен для создания асинхронности)
-  const timeHandler = useRef<any>();
+    useEffect(() => {
+      if (!isAnotherUser && globalPostsFeed.length < 1) {
+        console.log("Preloading all posts");
+        loadMorePosts([]);
+      } else if (isAnotherUser && userPublicPostFeed.length < 1) {
+        console.log("Preloading users public posts");
+        loadMorePosts([]);
+      } else if (isAnotherUser && userPrivatePostFeed.length < 1) {
+        console.log("Preloading users private posts");
+        loadMorePosts([]);
+      }
+    }, [globalPostsFeed, isAnotherUser, isPrivatePosts]);
 
-  //Ссылка для тела компонента (нужна для рассчётов пропорций окна)
-  const bodyBlockRef = useRef<HTMLDivElement>(null);
-
-  const sendData = (command: string, data: any) => {
-    httpPost(socket, command, data);
-  };
-
-  //Обработчик для работы с постами
-  socket.on("Get Posts Response", (res: any) => {
-    //При каждом срабатывании EventListener...
-    //Обнуляем таймер
-    clearTimeout(timeHandler.current);
-
-    //Проверяем, что это за операция к нам поступила в ответе
-    switch (res.operation) {
-      //Если это ответ на запрос о получении постов
-      case "get all posts": {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-        if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.result}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.result
-            )}`
-          );
-        }
-        //Если все хорошо
-        else if (res.result && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newGlobalPosts = Array.from(
-            new Set(globalPostsFeed.concat(res.result))
-          );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newGlobalPosts);
-            setGlobalPostsFeed(newGlobalPosts);
-          }, 1);
+    useImperativeHandle(ref, () => ({
+      getPostsResponse(
+        res: socket.ISocketResponse<
+          api.models.IPost[],
+          api.models.IAvailablePostActions
+        >
+      ) {
+        if (res.data.requestFor === "get all posts") {
+          if (res.status === "Server Error" || res.status === "SQL Error") {
+            onError(
+              `Connection error. Please, reload page. Stack: \n${res.data.response}`
+            );
+          }
+          if (res.data.response && res.status === "OK") {
+            setGlobalPostsFeed(prevState =>
+              uniqBy([...prevState, ...res.data.response], "idPost")
+            );
+          }
           setReadyToCallNextPage(true);
         }
-        break;
-      }
 
-      case "get user public posts": {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-        if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.result}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.result
-            )}`
-          );
-        }
-        //Если все хорошо
-        else if (res.result && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newUserPublicPosts = Array.from(
-            new Set(userPublicPostFeed.concat(res.result))
-          );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newUserPublicPosts);
-            setPublicUserPostFeed(newUserPublicPosts);
-          }, 1);
+        if (res.data.requestFor === "get user public posts") {
+          if (res.status === "Server Error" || res.status === "SQL Error") {
+            onError(
+              `Connection error. Please, reload page. Stack: \n${res.data.response}`
+            );
+          }
+          if (res.status === "Not Found") {
+            if (
+              userPublicPostFeed.length > 1 &&
+              userPublicPostFeed[0].username !== isAnotherUser
+            ) {
+              setPublicUserPostFeed([]);
+            }
+          }
+          if (res.data.response && res.status === "OK") {
+            setPublicUserPostFeed(prevState =>
+              uniqBy([...prevState, ...res.data.response], "idPost")
+            );
+          }
           setReadyToCallNextPage(true);
         }
-        break;
-      }
 
-      case "get user private posts": {
-        //Если ошибка сервера Node или сервера БД - дропаем страницу ошибки
-        if (res.status === "Server Error" || res.status === "SQL Error") {
-          console.error(`Rejected: ${res.result}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.result
-            )}`
-          );
-        }
-        //Если все хорошо
-        else if (res.result && res.status === "OK") {
-          //Поштучно получаем каждый пост и добавляем его в Сет
-          let newUserPrivatePosts = Array.from(
-            new Set(userPrivatePostFeed.concat(res.result))
-          );
-          //С помощью таймера асинхронно обновляем массив постов
-          timeHandler.current = setTimeout(() => {
-            console.log(newUserPrivatePosts);
-            setPrivateUserPostFeed(newUserPrivatePosts);
-          }, 1);
+        if (res.data.requestFor === "get user private posts") {
+          if (res.status === "Server Error" || res.status === "SQL Error") {
+            onError(
+              `Connection error. Please, reload page. Stack: \n${res.data.response}`
+            );
+          }
+          if (res.data.response && res.status === "OK") {
+            setPrivateUserPostFeed(prevState =>
+              uniqBy([...prevState, ...res.data.response], "idPost")
+            );
+          }
           setReadyToCallNextPage(true);
         }
-        break;
-      }
+      },
 
-      //Если это ответ на запрос о получении комментариев к посту
-      case "get comments": {
-        if (res.status === "OK") {
-          //Таймером устанавливаем список комментариев
-          timeHandler.current = setTimeout(() => {
+      commentsResponse(
+        res: socket.ISocketResponse<
+          IComment[],
+          api.models.IAvailablePostActions
+        >
+      ) {
+        //Если это ответ на запрос о получении комментариев к посту
+        if (res.data.requestFor === "get comments") {
+          if (res.status === "OK") {
             console.log(res);
-            setComments(res.result);
-          }, 1);
-        } else if (
-          res.status === "Server Error" ||
-          res.status === "SQL Error"
-        ) {
-          console.error(`Rejected: ${res.result}`);
+            setComments((res.data.response as unknown) as IComment[]);
+          } else if (
+            res.status === "Server Error" ||
+            res.status === "SQL Error"
+          ) {
+            console.error(`Rejected: ${res.data.response}`);
+            onError(
+              `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+                res.data.response
+              )}`
+            );
+          }
+        }
+        //Если это ответ на запрос о создании комментария
+        if (res.data.requestFor === "create comment") {
+          if (res.status === "OK") {
+            console.log(res);
+          } else if (
+            res.status === "Server Error" ||
+            res.status === "SQL Error"
+          ) {
+            console.error(`Rejected: ${res.data.response}`);
+            onError(
+              `Connection error. Please, reload page. Stack: \n${JSON.stringify(
+                res.data.response
+              )}`
+            );
+          }
+        }
+      },
+
+      ratingResponse(
+        res: socket.ISocketResponse<
+          api.models.IPost,
+          api.models.IAvailableRatingActions
+        >
+      ) {
+        if (res.data.requestFor === "set post rating") {
+          if (res.status === "OK") {
+            if (isAnotherUser) {
+              setPublicUserPostFeed(prevState => {
+                return prevState.map(post => {
+                  let updatedPost = post;
+                  if (post.idPost === res.data.response.idPost)
+                    updatedPost.rating = res.data.response.rating;
+                  return updatedPost;
+                });
+              });
+            } else {
+              setGlobalPostsFeed(prevState => {
+                return prevState.map(post => {
+                  let updatedPost = post;
+                  if (post.idPost === res.data.response.idPost)
+                    updatedPost.rating = res.data.response.rating;
+                  return updatedPost;
+                });
+              });
+            }
+          }
+        } else {
           onError(
             `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.result
+              res.data.response
             )}`
           );
         }
-        break;
       }
-      //Если это ответ на запрос о создании комментария
-      case "create comment": {
-        if (res.status === "OK") {
-          console.log(res);
-        } else if (
-          res.status === "Server Error" ||
-          res.status === "SQL Error"
-        ) {
-          console.error(`Rejected: ${res.result}`);
-          onError(
-            `Connection error. Please, reload page. Stack: \n${JSON.stringify(
-              res.result
-            )}`
-          );
-        }
-        break;
-      }
-      default: {
-        console.error(`Unknown server response ${res.operation}`);
-        break;
-      }
-    }
-  });
+    }));
 
-  socket.on("Get User Public Posts Response", (res: any) => {
-    if (res.result === "No Results Found.") {
-      if (userPublicPostFeed.length > 1)
-        if (userPublicPostFeed[0].username !== isAnotherUser)
-          setPublicUserPostFeed([]);
-    } else {
-      let newFeed = userPublicPostFeed.concat(res.result);
-      setPublicUserPostFeed(newFeed);
-    }
-  });
+    const loadMorePosts = (
+      postIDs = Array.from(globalPostsFeed, post => post.idPost)
+    ) => {
+      let postType = isPrivatePosts
+        ? ("get user private posts" as "get user private posts")
+        : ("get user public posts" as "get user public posts");
 
-  socket.on("Set Rating Response", (res: any) => {
-    if (isAnotherUser) {
-      setPublicUserPostFeed(prevState => {
-        return prevState.map(post => {
-          let updatedPost = post;
-          if (post.idPost === res.result.IdPost)
-            updatedPost.rating = res.result.rating;
-          return updatedPost;
-        });
-      });
-    } else {
-      setGlobalPostsFeed(prevState => {
-        return prevState.map(post => {
-          let updatedPost = post;
-          if (post.idPost === res.result.IdPost)
-            updatedPost.rating = res.result.rating;
-          return updatedPost;
-        });
-      });
-    }
-  });
-
-  //(error) => {}
-
-  const loadMorePosts = (
-    postIDs = Array.from(globalPostsFeed, post => post.idPost)
-  ) => {
-    let postType = isPrivatePosts
-      ? "get user private posts"
-      : "get user public posts";
-    let postData = isAnotherUser
-      ? {
-          operation: postType,
-          json: {
-            username: isAnotherUser,
+      sendToSocket<
+        api.models.IGetPostsRequest,
+        api.models.IAvailablePostActions
+      >(socket, {
+        data: {
+          options: {
+            username: isAnotherUser || currentUser.username,
             currentUser: currentUser.idUsers,
-            filters: JSON.stringify(nullFilter),
+            filters: nullFilter,
             postIDs: postIDs
-          }
-        }
-      : { operation: "get all posts", postIDs: postIDs };
-    sendData("Get Posts Request", postData);
-    setReadyToCallNextPage(false);
-  };
-
-  const loadComments = (postID: number) => {
-    if (postID !== 0) {
-      let postData = { operation: "get comments", postID: postID };
-      sendData("Get Posts Request", postData);
-    }
-  };
-
-  const onCreateComment = (idPost: number, comment: string) => {
-    var d = new Date();
-    var dateTime: string =
-      d.getFullYear() +
-      "-" +
-      (d.getMonth() + 1) +
-      "-" +
-      d.getDate() +
-      " " +
-      d.getHours() +
-      ":" +
-      d.getMinutes() +
-      ":" +
-      d.getSeconds();
-    const prevPostState =
-      mode === "Main Page"
-        ? globalPostsFeed.filter(post => post.idPost === idPost)
-        : userPublicPostFeed.filter(post => post.idPost === idPost);
-    const newComment: IComment = {
-      content: comment,
-      date: dateTime,
-      author: currentUser.username,
-      rating: 0,
-      userAvatar: currentUser.avatar,
-      userRating: currentUser.rating
+          },
+          requestFor: isAnotherUser ? postType : "get all posts"
+        },
+        operation: "Get Posts Request",
+        token
+      });
+      setReadyToCallNextPage(false);
     };
-    //console.log(" Current post: ", prevPostState);
-    console.log("Creating new comment: ", newComment);
-    setComments(prevState => [...prevState, newComment]);
 
-    const postData = {
-      operation: "create comment",
-      json: {
-        idUser: currentUser.idUsers,
-        content: newComment.content,
-        rating: newComment.rating,
-        date: newComment.date,
-        idPost: prevPostState[0].idPost
+    const loadComments = (postID: number) => {
+      if (postID !== 0) {
+        sendToSocket<
+          api.models.IGetPostsRequest,
+          api.models.IAvailablePostActions
+        >(socket, {
+          data: {
+            options: {
+              username: isAnotherUser || currentUser.username,
+              currentUser: currentUser.idUsers,
+              filters: nullFilter,
+              postIDs: [postID]
+            },
+            requestFor: "get comments"
+          },
+          operation: "Comments Request",
+          token
+        });
       }
     };
-    sendData("Get Posts Request", postData);
-  };
 
-  useEffect(() => {
-    if (!isAnotherUser && globalPostsFeed.length < 1) {
-      console.log("Preloading all posts");
-      loadMorePosts([]);
-    } else if (isAnotherUser && userPublicPostFeed.length < 1) {
-      console.log("Preloading users public posts");
-      loadMorePosts([]);
-    } else if (isAnotherUser && userPrivatePostFeed.length < 1) {
-      console.log("Preloading users private posts");
-      loadMorePosts([]);
-    }
-  }, [globalPostsFeed, isAnotherUser, isPrivatePosts]);
+    const onCreateComment = (idPost: number, comment: string) => {
+      const prevPostState =
+        mode === "Main Page"
+          ? globalPostsFeed.filter(post => post.idPost === idPost)
+          : userPublicPostFeed.filter(post => post.idPost === idPost);
+      const newComment: IComment = {
+        content: comment,
+        date: formatDate(),
+        author: currentUser.username,
+        rating: 0,
+        userAvatar: currentUser.avatar,
+        userRating: currentUser.rating
+      };
+      //console.log(" Current post: ", prevPostState);
+      console.log("Creating new comment: ", newComment);
+      setComments(prevState => [...prevState, newComment]);
 
-  const onSetLike = (
-    post: number,
-    type: "new" | "inversion" | "from dislike"
-  ) => {
-    const postData =
-      '{ "operation": "set rating"' +
-      ', "json": {' +
-      ' "idUser": ' +
-      currentUser.idUsers +
-      ', "data": ' +
-      '{ "idPost": ' +
-      post +
-      ', "setting": "like"' +
-      ', "type":"' +
-      type +
-      '"}' +
-      "}}";
-    sendData("createpost.php", postData);
-  };
+      sendToSocket<
+        api.models.ICreateCommentRequest,
+        api.models.IAvailablePostActions
+      >(socket, {
+        data: {
+          options: {
+            idUser: currentUser.idUsers,
+            content: newComment.content,
+            rating: newComment.rating!,
+            date: newComment.date,
+            idPost: prevPostState[0].idPost
+          },
+          requestFor: "create comment"
+        },
+        operation: "Comments Request",
+        token
+      });
+    };
 
-  const onSetDislike = (
-    post: number,
-    type: "new" | "inversion" | "from like"
-  ) => {
-    const postData =
-      '{ "operation": "set rating"' +
-      ', "json": {' +
-      ' "idUser": ' +
-      currentUser.idUsers +
-      ', "data": ' +
-      '{ "idPost": ' +
-      post +
-      ', "setting": "dislike"' +
-      ', "type":"' +
-      type +
-      '"}' +
-      "}}";
-    sendData("createpost.php", postData);
-  };
+    const onSetLike = (
+      post: number,
+      type: "new" | "inversion" | "from dislike"
+    ) => {
+      sendToSocket<
+        api.models.ISetPostRatingRequest,
+        api.models.IAvailableRatingActions
+      >(socket, {
+        data: {
+          options: {
+            idUser: currentUser.idUsers,
+            idPost: post,
+            setting: "like",
+            type
+          },
+          requestFor: "set post rating"
+        },
+        operation: "Rating Request",
+        token
+      });
+    };
 
-  var pageSize = bodyBlockRef.current
-    ? bodyBlockRef.current.offsetWidth
-    : document.body.clientWidth;
-  var minX = pageSize * 0.29;
+    const onSetDislike = (
+      post: number,
+      type: "new" | "inversion" | "from like"
+    ) => {
+      sendToSocket<
+        api.models.ISetPostRatingRequest,
+        api.models.IAvailableRatingActions
+      >(socket, {
+        data: {
+          options: {
+            idUser: currentUser.idUsers,
+            idPost: post,
+            setting: "dislike",
+            type
+          },
+          requestFor: "set post rating"
+        },
+        operation: "Rating Request",
+        token
+      });
+    };
 
-  const selectedMarker = (e: number) => {
-    setSelectedPostID(e);
-    loadComments(e);
-  };
-  return (
-    <AdaptiveBodyBlock ref={bodyBlockRef} mode={mode}>
-      <PageConstructor initSizes={[minX, pageSize - minX]}>
-        {selectedPostID === 0 ? (
-          <Feed
-            type="Preview"
-            currentUser={currentUser.idUsers}
-            onReadyToCallNextPage={onReadyToCallNextPage}
+    var pageSize = bodyBlockRef.current
+      ? bodyBlockRef.current.offsetWidth
+      : document.body.clientWidth;
+    var minX = pageSize * 0.29;
+
+    const selectedMarker = (e: number) => {
+      setSelectedPostID(e);
+      loadComments(e);
+    };
+    return (
+      <AdaptiveBodyBlock ref={bodyBlockRef} mode={mode}>
+        <PageConstructor initSizes={[minX, pageSize - minX]}>
+          {selectedPostID === 0 ? (
+            <Feed
+              type="Preview"
+              currentUser={currentUser.idUsers}
+              onReadyToCallNextPage={onReadyToCallNextPage}
+              data={
+                isAnotherUser
+                  ? isPrivatePosts
+                    ? userPrivatePostFeed
+                    : userPublicPostFeed
+                  : globalPostsFeed
+              }
+              onSelect={selectedMarker}
+              onCallNextPage={loadMorePosts}
+              onLike={onSetLike}
+              onDislike={onSetDislike}
+            />
+          ) : (
+            <Feed
+              type="FullPost"
+              currentUser={currentUser.idUsers}
+              data={
+                isAnotherUser
+                  ? isPrivatePosts
+                    ? userPrivatePostFeed.find(e => e.idPost === selectedPostID)
+                    : userPublicPostFeed.find(e => e.idPost === selectedPostID)
+                  : globalPostsFeed.find(e => e.idPost === selectedPostID)
+              }
+              comments={comments}
+              onSelect={selectedMarker}
+              onCreateComment={onCreateComment}
+              onLike={onSetLike}
+              onDislike={onSetDislike}
+            />
+          )}
+          <GoogleMapBlock
+            mode="Posts"
             data={
-              isAnotherUser
+              selectedPostID === 0
+                ? isAnotherUser
+                  ? isPrivatePosts
+                    ? userPrivatePostFeed
+                    : userPublicPostFeed
+                  : globalPostsFeed
+                : isAnotherUser
                 ? isPrivatePosts
-                  ? userPrivatePostFeed
-                  : userPublicPostFeed
-                : globalPostsFeed
+                  ? userPrivatePostFeed.filter(e => e.idPost === selectedPostID)
+                  : userPublicPostFeed.filter(e => e.idPost === selectedPostID)
+                : globalPostsFeed.filter(e => e.idPost === selectedPostID)
             }
-            onSelect={selectedMarker}
-            onCallNextPage={loadMorePosts}
-            onLike={onSetLike}
-            onDislike={onSetDislike}
+            selectedMarker={selectedMarker}
           />
-        ) : (
-          <Feed
-            type="FullPost"
-            currentUser={currentUser.idUsers}
-            data={
-              isAnotherUser
-                ? isPrivatePosts
-                  ? userPrivatePostFeed.find(e => e.idPost === selectedPostID)
-                  : userPublicPostFeed.find(e => e.idPost === selectedPostID)
-                : globalPostsFeed.find(e => e.idPost === selectedPostID)
-            }
-            comments={comments}
-            onSelect={selectedMarker}
-            onCreateComment={onCreateComment}
-            onLike={onSetLike}
-            onDislike={onSetDislike}
-          />
-        )}
-        <GoogleMapBlock
-          mode="Posts"
-          data={
-            selectedPostID === 0
-              ? isAnotherUser
-                ? isPrivatePosts
-                  ? userPrivatePostFeed
-                  : userPublicPostFeed
-                : globalPostsFeed
-              : isAnotherUser
-              ? isPrivatePosts
-                ? userPrivatePostFeed.filter(e => e.idPost === selectedPostID)
-                : userPublicPostFeed.filter(e => e.idPost === selectedPostID)
-              : globalPostsFeed.filter(e => e.idPost === selectedPostID)
-          }
-          selectedMarker={selectedMarker}
-        />
-      </PageConstructor>
-    </AdaptiveBodyBlock>
-  );
-};
+        </PageConstructor>
+      </AdaptiveBodyBlock>
+    );
+  }
+);
 
 export default BodyBlock;

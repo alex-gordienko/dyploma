@@ -1,24 +1,15 @@
-import React, { useEffect, useReducer, useCallback, useRef } from "react";
+import React, { useEffect, useReducer, useRef } from "react";
 import { useParams, Redirect } from "react-router";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import { ThemeProvider } from "emotion-theming";
 import lighten from "./styles/themes/lighten";
-import Preloader from "./shared/components/Preloader";
 import Container from "./shared/components/Container";
 import darken from "./styles/themes/darken";
-// mine
 import Header from "./shared/components/Header";
-import BodyBlock from "./shared/components/BodyBlock";
 import LoginForm from "./shared/components/LoginForm";
 import ProfileEditor from "./shared/components/ProfileEditor";
-import ProfileView from "./shared/components/ProfileViewer";
-import PeopleComponent from "./shared/components/PeopleComponent";
-import ChatsFeed from "./shared/components/ChatsBlock";
-
 import ErrorPage from "./shared/Pages/ErrorPage";
-import io from "socket.io-client";
-
-import { ServerAdress, httpPost } from "../src/backend/httpGet";
+import { sendToSocket } from "../src/backend/httpGet";
 
 import { initialState, reducer } from "./App.reducer";
 import {
@@ -28,36 +19,19 @@ import {
   logIn,
   saveUserDataToCookie,
   logOut,
-  createPost,
-  editPost,
-  setEditedPost,
-  createProfile,
   editProfile,
   getCountriesAndCities
 } from "./App.actions";
 import CreatePost from "./shared/components/PostEditor";
-import { INewPost, IFullDataUser, IPost, ISavedUser } from "./App.types";
-import { getStateFromStorage } from "./shared/storage/localStorage.actions";
-
-const nullUser: IFullDataUser = JSON.parse(
-  '{ "Country": "", ' +
-    '"City": "",' +
-    '"Birthday": "0000-00-00",' +
-    '"FirstName": "NoName",' +
-    '"LastName": "NoName",' +
-    '"Status": "Empty",' +
-    '"avatar": "null",' +
-    '"email": "NoName@nomail.com",' +
-    '"isBanned": false,' +
-    '"isValid": true,' +
-    '"regDate": "0000-00-00",' +
-    '"Birthday": "0000-00-00",' +
-    '"idUsers": 0,' +
-    '"phone": 123455677888,' +
-    '"rating": 0,' +
-    '"username": "NoName",' +
-    '"password": "NoPass" }'
-);
+import { IFullDataUser, ISavedUser } from "./App.types";
+import {
+  checkIfUserHasCookies,
+  getStateFromStorage
+} from "./shared/storage/localStorage.actions";
+import MainPageComponent from "./shared/Pages/Main/Main.component";
+import FriendListComponent from "./shared/Pages/FriendList/FriendList.component";
+import ChatComponent from "./shared/Pages/Chat/ChatPage.component";
+import ProfileViewComponent from "./shared/Pages/ProfileView/ProfileView.component";
 
 const App = () => {
   const [
@@ -75,70 +49,101 @@ const App = () => {
     dispatch
   ] = useReducer(reducer, initialState);
 
-  const sendToServer = (
-    socket: SocketIOClient.Socket,
-    command: string,
-    data: Object
-  ) => {
-    httpPost(socket, command, data);
-  };
-
   const timeHandler = useRef<any>();
 
-  socket.on("Client Login Response", (res: any) => {
-    dispatch(isLoading(false));
-    dispatch(setProgress("Loading Your info..."));
-    clearTimeout(timeHandler.current);
+  socket.on(
+    "Client Login Response",
+    (
+      res: socket.ISocketResponse<
+        IFullDataUser,
+        api.models.IAvailableUserActions
+      >
+    ) => {
+      dispatch(isLoading(false));
+      dispatch(setProgress("Loading Your info..."));
+      clearTimeout(timeHandler.current);
 
-    try {
-      if (res.status === "Not Found") {
-        // alert("Authorization error. Please, log in");
-        dispatch(logIn(user));
-      } else if (res.status === "OK") {
-        timeHandler.current = setTimeout(() => {
-          // console.log(res.result)
-          dispatch(logIn(res.result));
-          setTimeout(() => {
-            dispatch(isLoading(true));
-          }, 1000);
-        }, 100);
-      } else {
-        // console.log(res)
-        dispatch(
-          setErrorMessage(
-            "Incorrect Server Answer. Please, contact with admin with this Error: \n" +
-              JSON.stringify(res)
-          )
-        );
+      try {
+        if (res.status === "Not Found") {
+          alert("Authorization error. Please, log in");
+          dispatch(logIn(user));
+        } else if (res.status === "OK") {
+          timeHandler.current = setTimeout(() => {
+            dispatch(logIn(res.data.response));
+            if (!checkIfUserHasCookies()) {
+              dispatch(saveUserDataToCookie());
+            }
+            setTimeout(() => {
+              dispatch(isLoading(true));
+            }, 1000);
+          }, 100);
+        } else {
+          dispatch(
+            setErrorMessage(
+              "Incorrect Server Answer. Please, contact with admin with this Error: \n" +
+                JSON.stringify(res)
+            )
+          );
+        }
+      } catch (e) {
+        dispatch(setErrorMessage("Connection Error. Is server online?"));
       }
-    } catch (e) {
-      dispatch(setErrorMessage("Connection Error. Is server online?"));
     }
-  });
+  );
 
-  socket.on("Get Countries Response", (res: any) => {
-    dispatch(getCountriesAndCities(res.result));
-  });
-
-  socket.on("Get One Post Response", (res: any) => {
-    // console.log("searched post", res.result);
-    dispatch(setEditedPost(res.result));
-  });
-
-  // error => )
+  socket.on(
+    "Get Countries Response",
+    (
+      res: socket.ISocketResponse<
+        api.models.ICountriesAndCities | string,
+        api.models.IAvailableCountriesActions
+      >
+    ) => {
+      socket.removeEventListener("Get Countries Response");
+      if (res.data.requestFor === "Get Countries") {
+        if (res.status === "OK") {
+          dispatch(
+            getCountriesAndCities(
+              res.data.response as api.models.ICountriesAndCities
+            )
+          );
+        } else {
+          dispatch(setErrorMessage(res.data.response as string));
+        }
+      }
+    }
+  );
 
   const login = (bufLogin: string, bufPass: string) => {
-    const formData = { login: bufLogin, pass: bufPass, token };
-    sendToServer(socket, "Client Login Request", formData);
+    sendToSocket<api.models.ILoginRequest, api.models.IAvailableUserActions>(
+      socket,
+      {
+        data: {
+          options: {
+            login: bufLogin,
+            pass: bufPass
+          },
+          requestFor: "Client Login Request"
+        },
+        operation: "Client Login Request",
+        token
+      }
+    );
   };
   async function startProject() {
     await dispatch(isLoading(false));
     await dispatch(setProgress("Reconnect to server..."));
     const data: ISavedUser = await getStateFromStorage("savedUser");
-    await login(data.username, data.password);
+    await login(data.email, data.password);
     await dispatch(setProgress("Update info about you..."));
-    const postData1 = '{ "operation": "get contries" }';
-    sendToServer(socket, "get countries", postData1);
+    sendToSocket<{}, api.models.IAvailableCountriesActions>(socket, {
+      data: {
+        options: {},
+        requestFor: "Get Countries"
+      },
+      operation: "Get Countries Request",
+      token
+    });
     await dispatch(setProgress("Ready..."));
     await dispatch(isLoading(true));
   }
@@ -150,15 +155,14 @@ const App = () => {
       }
       // error => console.log(error)
     );
-    // setInterval(async function(){
-    // console.log("Tick");
-    // dispatch(saveUserDataToCookie());
-    // }, 5*60*1000);
+    setInterval(async () => {
+      dispatch(saveUserDataToCookie());
+    }, 5 * 60 * 1000);
   }, [socket]);
   window.onbeforeunload = (e: Event) => {
-    const formData = "logout=" + encodeURIComponent(user.username);
-    sendToServer(socket, "login.php", formData);
-    dispatch(saveUserDataToCookie());
+    // const formData = "logout=" + encodeURIComponent(user.username);
+    // sendToSocket(socket, "login.php", formData);
+    // dispatch(saveUserDataToCookie());
   };
 
   async function getUserData(log: string, pass: string) {
@@ -173,178 +177,112 @@ const App = () => {
   const LogOut = () => {
     dispatch(isLoading(false));
     dispatch(setProgress("Log out..."));
-    const formData = "logout=" + encodeURIComponent(user.username);
-    sendToServer(socket, "login.php", formData);
+    // const formData = "logout=" + encodeURIComponent(user.username);
+    // sendToServer(socket, "login.php", formData);
     dispatch(logOut());
     dispatch(setProgress("Update info about you..."));
     dispatch(isLoading(true));
   };
 
-  const MainPage = useCallback(() => {
-    return isReady ? (
-      isLogin ? (
-        <BodyBlock
-          mode="Main Page"
-          socket={socket}
-          currentUser={user}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  }, [isReady, isLogin]);
+  const MainPage = () => (
+    <MainPageComponent
+      socket={socket}
+      token={token}
+      currentUser={user}
+      mode="Main Page"
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
-  const FriendList = () => {
-    const { username } = useParams<{ username: string }>();
-    return isReady && country_city ? (
-      isLogin ? (
-        <PeopleComponent
-          socket={socket}
-          currentUser={user}
-          userNameToSearchFriends={username}
-          contries={country_city.country}
-          cities={country_city.city}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  };
+  const FriendList = () => (
+    <FriendListComponent
+      socket={socket}
+      token={token}
+      currentUser={user}
+      country_city={country_city}
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
-  const Chat = () => {
-    return isReady && country_city ? (
-      isLogin ? (
-        <ChatsFeed
-          socket={socket}
-          currentUser={user}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  };
+  const Chat = () => (
+    <ChatComponent
+      socket={socket}
+      currentUser={user}
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
   const PostEditor = () => {
     const { postID } = useParams<{ postID: string }>();
-    const loadData = async () => {
-      // console.log(postID);
-      await dispatch(isLoading(false));
-      await dispatch(setProgress("Gettin info about post..."));
-      const postData =
-        '{ "operation": "get one post", "postID": ' + postID + " }";
-      if (postID === "new") {
-        dispatch(setEditedPost("new"));
-      } else {
-        await sendToServer(socket, "getPosts.php", postData);
-      }
-      await dispatch(setProgress("Almost done..."));
-      await dispatch(isLoading(true));
-    };
 
-    async function createNewPost(newPost: IPost) {
-      await dispatch(isLoading(false));
-      await dispatch(createPost(newPost));
-      await dispatch(isLoading(true));
-    }
-
-    async function EditPost(editedPost: IPost) {
-      await dispatch(isLoading(false));
-      await dispatch(editPost(editedPost));
-      await dispatch(isLoading(true));
-    }
-
-    return isReady ? (
-      isLogin ? (
-        editedPost === "new" ||
-        editedPost === "No Results Found." ||
-        editedPost.idUser === 0 ? (
-          <CreatePost
-            type="Create"
-            currentUser={user}
-            createNewPost={createNewPost}
-          />
-        ) : (
-          <CreatePost
-            type="Edit"
-            currentUser={user}
-            loadData={loadData}
-            existPost={editedPost}
-            saveChanges={EditPost}
-          />
-        )
-      ) : (
-        <Redirect to={"/login"} />
-      )
+    return isLogin ? (
+      <CreatePost
+        socket={socket}
+        token={token}
+        postId={postID === "new" ? "new" : Number(postID)}
+        currentUser={user}
+        onError={e => {
+          dispatch(setErrorMessage(e));
+        }}
+      />
     ) : (
-      <Preloader message={progressMessage} />
+      <Redirect to={"/login"} />
     );
   };
 
-  const ProfileViewer = (props: any) => {
-    const { username } = useParams<{ username: string }>();
+  const ProfileViewer = () => (
+    <ProfileViewComponent
+      socket={socket}
+      token={token}
+      currentUser={user}
+      isLogin={isLogin}
+      isReady={isReady}
+      progressMessage={progressMessage}
+      onError={e => {
+        dispatch(setErrorMessage(e));
+      }}
+    />
+  );
 
-    return isReady ? (
-      isLogin ? (
-        <ProfileView
-          socket={socket}
-          username={username}
-          editable={username === user.username ? true : false}
-          currentUser={user}
-          onError={e => {
-            dispatch(setErrorMessage(e));
-          }}
-        />
-      ) : (
-        <Redirect to={"/login"} />
-      )
-    ) : (
-      <Preloader message={progressMessage} />
-    );
-  };
   const ProfileEdit = () => {
-    const handleEditUserChange = (user: IFullDataUser) => {
-      dispatch(isLoading(false));
-      dispatch(editProfile(user));
-      dispatch(isLoading(true));
-    };
-    const handleCreateUserChange = (user: IFullDataUser) => {
-      dispatch(isLoading(false));
-      dispatch(createProfile(user));
-      dispatch(isLoading(true));
-    };
-
-    return isReady ? (
-      isLogin ? (
-        <ProfileEditor
-          contries={country_city.country}
-          cities={country_city.city}
-          userData={user}
-          onUserUpdate={handleEditUserChange}
-        />
-      ) : (
-        <ProfileEditor
-          contries={country_city.country}
-          cities={country_city.city}
-          onUserCreate={handleCreateUserChange}
-        />
-      )
+    return isLogin ? (
+      <ProfileEditor
+        socket={socket}
+        token={token}
+        contries={country_city.country}
+        cities={country_city.city}
+        currentUser={user}
+        onUpdateUserData={user => dispatch(editProfile(user))}
+        onError={e => {
+          dispatch(setErrorMessage(e));
+        }}
+      />
     ) : (
-      <Preloader message={progressMessage} />
+      <ProfileEditor
+        socket={socket}
+        token={token}
+        contries={country_city.country}
+        cities={country_city.city}
+        onUpdateUserData={user => dispatch(editProfile(user))}
+        onError={e => {
+          dispatch(setErrorMessage(e));
+        }}
+      />
     );
   };
 

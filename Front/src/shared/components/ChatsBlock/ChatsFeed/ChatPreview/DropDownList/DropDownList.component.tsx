@@ -5,20 +5,23 @@ import StyledDropDown from "./DropDownList.styled";
 
 interface IDropDownListProps {
   visible: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
+  menuItemList: {
+    label: string;
+    onClick: (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => void;
+  }[];
 }
 
-const DropDownList = ({ visible, onEdit, onDelete }: IDropDownListProps) => {
+const DropDownList = ({ visible, menuItemList }: IDropDownListProps) => {
   return visible ? (
     <StyledDropDown>
       <ul>
-        <li className="menu-link" onClick={() => onEdit()}>
-          Edit
-        </li>
-        <li className="menu-link" onClick={() => onDelete()}>
-          Delete
-        </li>
+        {menuItemList.map(item => {
+          return (
+            <li className="menu-link" onClick={item.onClick}>
+              {item.label}
+            </li>
+          );
+        })}
       </ul>
     </StyledDropDown>
   ) : null;

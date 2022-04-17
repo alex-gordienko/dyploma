@@ -14,3 +14,7 @@ export const Content = styled.div`
     letter-spacing: 4px;
   }
 `;
+
+export const ChatButtons = styled.div`
+  width: max-content;
+`;

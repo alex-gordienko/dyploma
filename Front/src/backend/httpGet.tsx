@@ -1,7 +1,7 @@
 /* tslint:disable */
 //const adress = "http://10.15.0.9/5001/";
 //const adress = "http://213.231.13.15/dyploma/";
-export const ServerAdress = "http://10.15.0.9:5001";
+export const ServerAdress = "http://10.15.0.91:5001";
 
 export function httpGet(url: string) {
   return new Promise(function(resolve, reject) {
@@ -23,12 +23,11 @@ export function httpGet(url: string) {
   });
 }
 
-export function httpPost(
+export function sendToSocket<T, K>(
   socket: SocketIOClient.Socket,
-  command: string,
-  data: any
+  data: socket.ISocketRequest<T, K>
 ) {
-  console.log("Connecting to: " + command);
+  console.log("Connecting to: " + data.operation);
   console.log("Sending next: ", data);
-  return socket.emit(command, data);
+  return socket.emit(data.operation, data);
 }

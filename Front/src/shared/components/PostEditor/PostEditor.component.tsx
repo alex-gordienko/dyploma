@@ -1,54 +1,126 @@
 /* tslint:disable */
 import React, { useState, useCallback, useEffect } from "react";
+import { isEqual } from "lodash";
 import GoogleMapBlock from "../GoogleMapBlock";
 import { StyledEditorBlock, PositionSelector } from "./PostEditor.styled";
 import { SubHeader } from "../EditorComponents/EditorComponents.styled";
 import SubContainer from "../Container/Container.Pages.styled";
 import Label from "./Label";
 import EditorItems from "./EditorElements";
-import {
-  IFullDataUser,
-  INewPost,
-  IPhotoBuffer,
-  IPost
-} from "../../../App.types";
+import { IFullDataUser } from "../../../App.types";
 import { nullPhoto, nullPost } from "../../../App.reducer";
 import { Redirect } from "react-router-dom";
+import Preloader from "../Preloader";
+import { sendToSocket } from "../../../backend/httpGet";
+import { formatDate } from "../utils/generateData";
 
-interface IEditPostProps {
-  type: "Edit";
+interface IPostEditorProps {
+  postId: number | "new";
   currentUser: IFullDataUser;
-  loadData: () => void;
-  existPost: IPost;
-  saveChanges: (changedPost: IPost) => void;
+  socket: SocketIOClient.Socket;
+  token: string;
+  onError: (message: string) => void;
 }
 
-interface ICreatePostProps {
-  type: "Create";
-  currentUser: IFullDataUser;
-  createNewPost: (newPost: IPost) => void;
-}
-
-type IPostEditorProps = ICreatePostProps | IEditPostProps;
-
-const PostEditor = (mode: IPostEditorProps) => {
-  const [newPost, setNewPost] = useState<IPost>(
-    mode.type === "Create"
-      ? {
-          ...nullPost,
-          idUser: mode.currentUser.idUsers,
-          username: mode.currentUser.username
-        }
-      : mode.existPost
-  );
+const PostEditor = ({
+  postId,
+  currentUser,
+  socket,
+  token,
+  onError
+}: IPostEditorProps) => {
+  const [newPost, setNewPost] = useState<api.models.IPost | null>(nullPost);
+  const [
+    initialPostState,
+    setInitialPostState
+  ] = useState<api.models.IPost | null>(nullPost);
   const [isDisabled, setIsDisabled] = useState(true);
+  const [isReady, setIsReady] = useState(true);
+
+  const getRedirect = () => {
+    return <Redirect to="/" />;
+  };
+
+  socket.on(
+    "Post Editor Response",
+    (
+      res: socket.ISocketResponse<
+        api.models.IPost | string,
+        api.models.IAvailablePostActions
+      >
+    ) => {
+      socket.removeEventListener("Post Editor Response");
+      if (res.data.requestFor === "get one post") {
+        if (res.status === "OK") {
+          setNewPost(res.data.response as api.models.IPost);
+          setInitialPostState(res.data.response as api.models.IPost);
+          setIsReady(true);
+        }
+      }
+      if (res.data.requestFor === "create post") {
+        if (res.status === "OK") {
+          getRedirect();
+          alert("Successful! Please, wait until your post will accept");
+        } else {
+          onError(res.data.response as string);
+        }
+      }
+    }
+  );
+
+  const createPost = () => {
+    sendToSocket<api.models.IPost, api.models.IAvailablePostActions>(socket, {
+      data: {
+        options: {
+          ...newPost,
+          date: formatDate(),
+          idUser: currentUser.idUsers,
+          username: currentUser.username
+        },
+        requestFor: "create post"
+      },
+      operation: "Post Editor Request",
+      token: token
+    });
+  };
+
+  const savePost = () => {
+    if (isEqual(newPost, initialPostState)) {
+      alert("There is nothing to change");
+    } else {
+      sendToSocket<api.models.IPost, api.models.IAvailablePostActions>(socket, {
+        data: {
+          options: {
+            ...newPost,
+            date: formatDate()
+          },
+          requestFor: "edit post"
+        },
+        operation: "Post Editor Request",
+        token: token
+      });
+    }
+  };
 
   useEffect(() => {
-    if (mode.type === "Edit" && newPost === null) {
-      //console.log("postData is null. Calling function");
-      mode.loadData();
+    if (postId !== "new") {
+      setIsReady(false);
+      sendToSocket<
+        api.models.IGetPostToEditRequest,
+        api.models.IAvailablePostActions
+      >(socket, {
+        data: {
+          options: { postID: postId },
+          requestFor: "get one post"
+        },
+        operation: "Post Editor Request",
+        token
+      });
     }
-  }, [1]);
+    return () => {
+      socket.removeEventListener("Post Editor Response");
+    };
+  }, [postId]);
 
   useEffect(() => {
     newPost.description === "" ||
@@ -60,29 +132,12 @@ const PostEditor = (mode: IPostEditorProps) => {
       : setIsDisabled(false);
   }, [newPost]);
 
-  const getRedirect = () => {
-    return <Redirect to="/" />;
-  };
-
   const handleLabelCommand = (number: "Save" | "Cancel") => {
     if (number === "Save") {
-      var d = new Date();
-      var dateTime: string =
-        d.getFullYear() +
-        "-" +
-        (d.getMonth() + 1) +
-        "-" +
-        d.getDate() +
-        " " +
-        d.getHours() +
-        ":" +
-        d.getMinutes() +
-        ":" +
-        d.getSeconds();
-      if (mode.type === "Create") {
-        mode.createNewPost({ ...newPost, date: dateTime });
-      } else if (mode.type === "Edit" && newPost) {
-        mode.saveChanges({ ...newPost, date: dateTime });
+      if (postId === "new") {
+        createPost();
+      } else {
+        savePost();
       }
     } else if (number === "Cancel") {
       getRedirect();
@@ -108,7 +163,7 @@ const PostEditor = (mode: IPostEditorProps) => {
     if (newPost.photoes === nullPhoto) {
       setNewPost({ ...newPost, photoes: [] });
     }
-    const newPhoto: IPhotoBuffer[] = newPost.photoes
+    const newPhoto: api.models.IPhotoBuffer[] = newPost.photoes
       .filter(photo => !nullPhoto.includes(photo))
       .concat({ name, blob: photoUrl });
     setNewPost({ ...newPost, photoes: newPhoto });
@@ -118,97 +173,117 @@ const PostEditor = (mode: IPostEditorProps) => {
     setNewPost({ ...newPost, photoes: nullPhoto });
   };
 
-  return mode.type === "Edit" && newPost ? (
-    mode.currentUser.rating > 70 &&
-    mode.currentUser.idUsers === newPost.idUser ? (
-      <SubContainer>
-        <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
-          Create Post
-        </Label>
-        <StyledEditorBlock>
-          <SubHeader>Primary info</SubHeader>
-          <EditorItems
-            photoesUrls={newPost.photoes}
-            pushUpUrl={setPhotoes}
-            clearPhotoBuf={clearPhotoBuf}
-            onNameValueChanged={onNameValueChanged}
-            onDescriptionValueChanged={onDescriptionValueChanged}
-            onIsPrivatePostChanged={onIsPrivatePostChanged}
-            nameValue={newPost.Name}
-            descriptionValue={newPost.description}
-            isPrivatePost={newPost.isPrivate ? true : false}
-          />
-          <SubHeader>Actual Position</SubHeader>
-          <PositionSelector>
-            <GoogleMapBlock
-              mode="Posts"
-              aloneMarker={newPost}
-              newPosition={handlePosition}
-            />
-          </PositionSelector>
-        </StyledEditorBlock>
-      </SubContainer>
-    ) : mode.currentUser.idUsers === newPost.idUser ? (
-      <SubContainer>
-        <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
-          Error
-        </Label>
-        <StyledEditorBlock>
-          <SubHeader>
-            Your Rating: {mode.currentUser.rating}. That's too low to create
-            post
-          </SubHeader>
-        </StyledEditorBlock>
-      </SubContainer>
-    ) : (
-      <SubContainer>
-        <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
-          Error
-        </Label>
-        <StyledEditorBlock>
-          <SubHeader>That's not your post, dude</SubHeader>
-        </StyledEditorBlock>
-      </SubContainer>
-    )
-  ) : mode.currentUser.rating > 70 ? (
-    <SubContainer>
-      <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
-        Create Post
-      </Label>
-      <StyledEditorBlock>
-        <SubHeader>Primary info</SubHeader>
-        <EditorItems
-          photoesUrls={newPost.photoes}
-          pushUpUrl={setPhotoes}
-          clearPhotoBuf={clearPhotoBuf}
-          onNameValueChanged={onNameValueChanged}
-          onDescriptionValueChanged={onDescriptionValueChanged}
-          onIsPrivatePostChanged={onIsPrivatePostChanged}
-          nameValue={newPost.Name}
-          descriptionValue={newPost.description}
-          isPrivatePost={newPost.isPrivate ? true : false}
-        />
-        <SubHeader>Actual Position</SubHeader>
-        <PositionSelector>
-          <GoogleMapBlock
-            mode="Posts"
-            aloneMarker={undefined}
-            newPosition={handlePosition}
-          />
-        </PositionSelector>
-      </StyledEditorBlock>
-    </SubContainer>
+  const renderPostEditor = () => {
+    const isUserHasAccessToPostEditor = currentUser.rating > 70;
+    if (postId !== "new") {
+      const isPostOwner = currentUser.idUsers === newPost.idUser;
+      if (isUserHasAccessToPostEditor && isPostOwner) {
+        return (
+          <SubContainer>
+            <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
+              Edit Post
+            </Label>
+            <StyledEditorBlock>
+              <SubHeader>Primary info</SubHeader>
+              <EditorItems
+                photoesUrls={newPost.photoes}
+                pushUpUrl={setPhotoes}
+                clearPhotoBuf={clearPhotoBuf}
+                onNameValueChanged={onNameValueChanged}
+                onDescriptionValueChanged={onDescriptionValueChanged}
+                onIsPrivatePostChanged={onIsPrivatePostChanged}
+                nameValue={newPost.Name}
+                descriptionValue={newPost.description}
+                isPrivatePost={newPost.isPrivate ? true : false}
+              />
+              <SubHeader>Actual Position</SubHeader>
+              <PositionSelector>
+                <GoogleMapBlock
+                  mode="Posts"
+                  aloneMarker={newPost}
+                  newPosition={handlePosition}
+                />
+              </PositionSelector>
+            </StyledEditorBlock>
+          </SubContainer>
+        );
+      }
+      if (isPostOwner) {
+        return (
+          <SubContainer>
+            <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
+              Error
+            </Label>
+            <StyledEditorBlock>
+              <SubHeader>
+                Your Rating: {currentUser.rating}. That's too low to create post
+              </SubHeader>
+            </StyledEditorBlock>
+          </SubContainer>
+        );
+      }
+      return (
+        <SubContainer>
+          <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
+            Error
+          </Label>
+          <StyledEditorBlock>
+            <SubHeader>That's not your post, dude</SubHeader>
+          </StyledEditorBlock>
+        </SubContainer>
+      );
+    }
+    if (postId === "new") {
+      if (isUserHasAccessToPostEditor) {
+        return (
+          <SubContainer>
+            <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
+              Create Post
+            </Label>
+            <StyledEditorBlock>
+              <SubHeader>Primary info</SubHeader>
+              <EditorItems
+                photoesUrls={newPost.photoes}
+                pushUpUrl={setPhotoes}
+                clearPhotoBuf={clearPhotoBuf}
+                onNameValueChanged={onNameValueChanged}
+                onDescriptionValueChanged={onDescriptionValueChanged}
+                onIsPrivatePostChanged={onIsPrivatePostChanged}
+                nameValue={newPost.Name}
+                descriptionValue={newPost.description}
+                isPrivatePost={newPost.isPrivate ? true : false}
+              />
+              <SubHeader>Actual Position</SubHeader>
+              <PositionSelector>
+                <GoogleMapBlock
+                  mode="Posts"
+                  aloneMarker={undefined}
+                  newPosition={handlePosition}
+                />
+              </PositionSelector>
+            </StyledEditorBlock>
+          </SubContainer>
+        );
+      }
+      return (
+        <SubContainer>
+          <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
+            Error
+          </Label>
+          <StyledEditorBlock>
+            <SubHeader>
+              Your Rating: {currentUser.rating}. That's too low to create post
+            </SubHeader>
+          </StyledEditorBlock>
+        </SubContainer>
+      );
+    }
+  };
+
+  return isReady ? (
+    renderPostEditor()
   ) : (
-    <SubContainer>
-      <Label disabled={isDisabled} labelCommand={handleLabelCommand}>
-        Error
-      </Label>
-      <StyledEditorBlock>
-        <SubHeader>
-          Your Rating: {mode.currentUser.rating}. That's too low to create post
-        </SubHeader>
-      </StyledEditorBlock>
-    </SubContainer>
+    <Preloader message="Preloading Post Data" />
   );
 };
 

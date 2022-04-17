@@ -49,7 +49,7 @@ export const SubHeader = styled.div`
 
 export const ButtonBlock = styled.div`
   box-sizing: border-box;
-  width: 100%;
+  width: max-content;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -78,7 +78,7 @@ export const ButtonBlock = styled.div`
 
   .label-button {
     cursor: pointer;
-    margin: 5px auto;
+    margin: 5px 10px;
     width: fit-content;
     text-decoration: none;
     font-family: ${props => props.theme.fontFamily.body};

@@ -1,4 +1,6 @@
 /Front/node_modules
+/Front/build
+/Front/coverage
 /Dump/
 /Photoes/
 /BodyBlock.test.ts
@@ -7,7 +9,12 @@
 /ERA_DB_Backup.sql
 /GoogleMap.Markers.ts
 /Photoes.zip
-/TensoFlow-Retrain-Models/ERA_NeuralBackup_31.05.2020.zip
-/TensoFlow-Retrain-Models/super/
 /NodeServer/node_modules/
+/NodeServer/build/
 /.vscode/
+/NodeServer/pageBuild/
+/NodeServer/tsconfig.tsbuildinfo
+/NodeServer/build/
+/NodeServer/src/Neural/node_modules/
+/NodeServer/src/Neural/super/
+/NodeServer/src/Neural/ERA_NeuralBackup_31.05.2020.zip
